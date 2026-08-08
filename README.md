@@ -4,6 +4,12 @@ Application web **mono-fichier** pour suivre le score d'une partie de **Yaniv** 
 
 👉 **Jouer maintenant : https://coretc.github.io/yaniv-club/** (ou télécharger `index.html` et l'ouvrir dans un navigateur).
 
+## Aperçu
+
+| Partie en cours | Bilan & graphe |
+|:---:|:---:|
+| <img src="screenshot-table.png" width="320" alt="Classement en direct"> | <img src="screenshot-report.png" width="320" alt="Bilan de fin de partie avec graphe"> |
+
 ## Fonctionnalités
 
 - 📚 **Bibliothèque de parties** : enregistrer, reprendre, renommer, supprimer plusieurs parties (sauvegarde auto dans le navigateur).
