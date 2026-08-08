@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c0b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>YANIV · Club</title>
+<style>
+:root{
+  --ink:#f4efe2; --muted:#9b998b; --bg:#0a0c0b; --bg2:#0e100f;
+  --gold:#e9c886; --gold2:#c19a54; --emer:#2fd39b; --emer2:#0f8f6a; --red:#e46a6a;
+  --line:rgba(233,200,134,.16); --card:rgba(255,255,255,.035);
+  --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,'Times New Roman',serif;
+  --sans:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,'Noto Sans',sans-serif;
+  --mono:ui-monospace,'SF Mono','Cascadia Mono',Consolas,'Roboto Mono',monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:var(--sans);
+  background:
+    radial-gradient(1000px 600px at 50% -8%,rgba(47,211,155,.16),transparent 55%),
+    radial-gradient(800px 600px at 90% 110%,rgba(233,200,134,.12),transparent 55%),
+    radial-gradient(700px 500px at 5% 40%,rgba(233,200,134,.06),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+}
+.wrap{max-width:680px;margin:auto;padding:18px 16px 130px;position:relative}
+.view{display:none;animation:fade .35s ease}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+h2{margin:24px 0 10px;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:12px}
+h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.muted{color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:22px 14px;font-size:14px}
+
+/* ---------- Boutons ---------- */
+button{font-family:var(--sans);border:none;border-radius:14px;padding:14px 18px;font-size:15px;font-weight:700;
+  color:#fff;cursor:pointer;-webkit-appearance:none;appearance:none;line-height:1.1;letter-spacing:.02em;
+  transition:transform .08s,filter .2s,box-shadow .2s;background:var(--card);box-shadow:0 6px 18px rgba(0,0,0,.3)}
+button:active{transform:translateY(1px) scale(.99)} button:hover{filter:brightness(1.06)}
+.btn-gold{background:linear-gradient(180deg,#f6e4b6,var(--gold) 55%,var(--gold2));color:#2a1e07;box-shadow:0 8px 24px rgba(233,200,134,.28)}
+.btn-emer{background:linear-gradient(180deg,#5ef0c0,var(--emer) 55%,var(--emer2));color:#042418;box-shadow:0 8px 24px rgba(47,211,155,.25)}
+.btn-ghost{background:var(--card);border:1px solid var(--line);color:var(--ink);box-shadow:none}
+.btn-red{background:transparent;border:1px solid rgba(228,106,106,.45);color:var(--red);box-shadow:none}
+.ic{padding:13px 15px;font-size:17px}
+.full{width:100%}
+
+/* ---------- Wordmark ---------- */
+.hero{text-align:center;padding:26px 0 6px;position:relative}
+.hero .halo{position:absolute;inset:-20px 0 auto;font-family:var(--serif);font-size:200px;line-height:1;color:rgba(233,200,134,.05);pointer-events:none;user-select:none;top:-10px}
+.suits{font-size:20px;letter-spacing:14px;margin-bottom:10px;position:relative}
+.suits .g{color:var(--gold)} .suits .r{color:var(--red)}
+.brand{position:relative;font-family:var(--serif);font-weight:600;font-size:clamp(50px,16vw,96px);line-height:.95;letter-spacing:.12em;
+  background:linear-gradient(180deg,#fdf1d2,var(--gold) 60%,var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 3px 22px rgba(233,200,134,.22))}
+.kicker{position:relative;margin-top:8px;font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:var(--muted)}
+
+/* ---------- Lobby ---------- */
+.g-item{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px;border:1px solid var(--line);border-radius:18px;
+  background:var(--card);margin:10px 0;transition:.2s}
+.g-item:hover{border-color:var(--gold)}
+.g-item.cur{border-color:var(--emer);box-shadow:0 0 22px rgba(47,211,155,.12)}
+.g-main{flex:1;min-width:0;cursor:pointer}
+.g-name{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-meta{font-size:12px;color:var(--muted);margin-top:4px;font-family:var(--mono)}
+.g-act{display:flex;gap:6px}
+.g-act button{padding:11px 13px;font-size:14px}
+
+/* ---------- Table : topbar ---------- */
+.tbar{display:flex;align-items:center;gap:10px;padding:6px 0 14px;position:sticky;top:0;z-index:10;
+  background:linear-gradient(180deg,var(--bg) 60%,transparent)}
+.tbar .title{flex:1;min-width:0;text-align:center;cursor:pointer}
+.tbar .title .lbl{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.tbar .title .nm{font-family:var(--serif);font-size:20px;font-weight:600;color:var(--gold);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- Segmented ---------- */
+.seg{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:5px;margin-bottom:6px}
+.seg button{flex:1;background:transparent;color:var(--muted);box-shadow:none;padding:11px;border-radius:12px;font-size:13px;font-weight:700}
+.seg button.on{background:linear-gradient(180deg,#f6e4b6,var(--gold2));color:#2a1e07}
+.tab{display:none} .tab.on{display:block;animation:fade .25s ease}
+
+/* ---------- Leaderboard ---------- */
+.lb{display:flex;flex-direction:column;gap:9px}
+.lb-row{display:flex;align-items:center;gap:14px;padding:15px 16px;border-radius:18px;background:var(--card);border:1px solid var(--line);transition:.2s}
+.lb-row .rk{font-family:var(--mono);font-size:16px;color:var(--muted);width:30px;text-align:center;flex:none}
+.lb-row .nm{flex:1;font-weight:600;font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-row .sc{font-family:var(--mono);font-weight:800;font-size:27px}
+.lb-row .sc small{font-size:11px;color:var(--muted);font-weight:600;margin-left:3px}
+.lb-row.lead{border-color:var(--gold);background:linear-gradient(90deg,rgba(233,200,134,.15),transparent 80%);
+  box-shadow:0 0 28px rgba(233,200,134,.16);animation:glow 3s ease-in-out infinite}
+.lb-row.lead .sc{color:var(--gold)}
+.lb-row.last .sc{color:var(--red)}
+@keyframes glow{50%{box-shadow:0 0 40px rgba(233,200,134,.3)}}
+
+/* ---------- Joueurs ---------- */
+.players{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.pchip{display:inline-flex;align-items:center;gap:9px;padding:8px 8px 8px 15px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+.pchip .x{width:26px;height:26px;padding:0;border-radius:50%;font-size:13px;background:transparent;border:1px solid rgba(228,106,106,.4);color:var(--red);box-shadow:none}
+.addrow{display:flex;gap:10px;margin-top:10px}
+input{font-family:var(--sans);font-size:16px;color:var(--ink);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:14px;padding:14px;outline:none;transition:.2s;width:100%}
+input::placeholder{color:var(--muted)}
+input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,200,134,.16)}
+.addrow input{flex:1}
+select{font-family:var(--sans);font-size:15px;color:var(--ink);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:14px;padding:14px;width:100%;-webkit-appearance:none;appearance:none;outline:none}
+select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,200,134,.16)}
+.rrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;font-size:15px}
+.rrow input[type=checkbox]{width:22px;height:22px;accent-color:var(--gold)}
+.rrow input[type=tel]{width:90px}
+
+/* ---------- Events / History / Stats ---------- */
+.ev{padding:12px 15px;border-radius:13px;margin:7px 0;font-size:14px;font-weight:600;border-left:3px solid var(--muted);background:var(--card)}
+.ev.yaniv{border-left-color:var(--emer);color:var(--emer)}
+.ev.asaf{border-left-color:var(--red);color:var(--red)}
+.ev.bonus{border-left-color:var(--gold);color:var(--gold)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:16px}
+table{width:100%;border-collapse:collapse;min-width:340px}
+th,td{padding:12px 13px;text-align:left;font-family:var(--mono);font-size:14px;border-bottom:1px solid rgba(233,200,134,.1)}
+th{background:rgba(233,200,134,.07);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:11px}
+tr:last-child td{border-bottom:none}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+.stat-tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+.stat-tile .n{font-weight:700;margin-bottom:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-tile .l{display:flex;gap:14px;font-family:var(--mono);font-size:15px;color:var(--muted)}
+
+/* ---------- Barre d'action collante ---------- */
+.actionbar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  background:linear-gradient(0deg,var(--bg) 55%,transparent);pointer-events:none}
+.actionbar .inner{max-width:680px;margin:auto;pointer-events:auto}
+
+/* ---------- Feuille de manche ---------- */
+.sheet-back{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;
+  background:rgba(4,6,5,.72);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.sheet-back.open{display:flex}
+.sheet{background:var(--bg2);border:1px solid var(--line);border-bottom:none;
+  border-top-left-radius:26px;border-top-right-radius:26px;width:100%;max-width:680px;max-height:94vh;overflow:auto;
+  padding:20px 16px calc(20px + env(safe-area-inset-bottom));animation:up .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 14px}
+.sheet h3{margin:0 0 4px;font-family:var(--serif);font-size:24px;color:var(--gold);text-align:center}
+.sheet .sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:16px}
+.dr{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:16px;border:1px solid var(--line);background:var(--card);margin-bottom:9px;cursor:pointer;transition:.15s}
+.dr.sel{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold),0 0 20px rgba(233,200,134,.12)}
+.dr .dnm{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dr .proj{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.dr .dval{font-family:var(--mono);font-size:24px;font-weight:800;min-width:48px;text-align:right;color:var(--ink)}
+.dr .dval.z{color:var(--muted)}
+.chips{display:flex;gap:6px}
+.chip{padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font-weight:700;font-size:12px;box-shadow:none}
+.chip.y.on{background:rgba(47,211,155,.16);border-color:var(--emer);color:var(--emer)}
+.chip.a.on{background:rgba(228,106,106,.16);border-color:var(--red);color:var(--red)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.pad button{padding:20px;font-size:23px;font-family:var(--mono);font-weight:700;background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:16px;box-shadow:none}
+.pad button:active{background:rgba(233,200,134,.14);border-color:var(--gold)}
+.sheet-foot{display:flex;gap:10px}
+.sheet-foot .btn-emer{flex:1}
+
+/* ---------- Modale générique (remplace prompt/confirm/alert, bloqués en mode app iOS) ---------- */
+.uiback{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:20px;
+  background:rgba(4,6,5,.78);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.uiback.open{display:flex}
+.uibox{background:var(--bg2);border:1px solid var(--line);border-radius:22px;padding:22px;max-width:420px;width:100%;
+  box-shadow:0 24px 70px rgba(0,0,0,.6);animation:up .25s ease}
+.uibox .t{font-family:var(--serif);font-size:21px;color:var(--gold);margin-bottom:8px}
+.uibox .m{color:var(--ink);font-size:15px;white-space:pre-wrap;margin-bottom:14px;line-height:1.45}
+.uibox input{margin-bottom:16px}
+.uibox .f{display:flex;gap:10px}
+.uibox .f button{flex:1;padding:14px}
+
+/* ---------- HUD : distributeur + timer ---------- */
+.hud{display:flex;gap:10px;align-items:stretch;margin:2px 0 14px}
+.dealer{flex:1;min-width:0;display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 14px;cursor:pointer}
+.dealer .ic2{font-size:22px}
+.dealer .lbl{font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted)}
+.dealer .who{font-weight:700;color:var(--gold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tmr{display:flex;align-items:center;font-family:var(--mono);font-size:16px;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0 14px;white-space:nowrap}
+.tmr.end{color:var(--red);border-color:rgba(228,106,106,.4)}
+.mini{padding:0 14px;font-size:18px}
+
+/* ---------- Leaderboard : colonne + indices ---------- */
+.lb-row .col{flex:1;min-width:0}
+.lb-row .nm2{font-weight:600;font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.lb-row .sub2{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:3px}
+.lb-row.dead{border-color:rgba(228,106,106,.5);background:linear-gradient(90deg,rgba(228,106,106,.12),transparent 80%)}
+.dchip{font-size:10px;color:var(--gold);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-weight:700;flex:none}
+
+/* ---------- Rapport / bilan ---------- */
+.repbox{max-width:600px;max-height:94vh;overflow:auto}
+.bilan{text-align:center;margin-bottom:8px}
+.bilan .crown{font-size:46px;line-height:1}
+.bilan .win{font-family:var(--serif);font-size:25px;color:var(--gold);margin-top:4px}
+.bilan .lose{color:var(--red);font-weight:700;margin-top:8px;font-size:14px}
+.bilan .dur{color:var(--muted);font-family:var(--mono);font-size:12px;margin-top:8px}
+.chart{width:100%;height:auto;display:block;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-top:6px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;justify-content:center}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink)}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+@media(max-width:420px){ .wrap{padding:14px 12px 130px} .lb-row .sc{font-size:23px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ LOBBY ============ -->
+  <section id="view-lobby" class="view on">
+    <div class="hero">
+      <div class="halo">♠</div>
+      <div class="suits"><span class="g">♠</span> <span class="r">♥</span> <span class="g">♣</span> <span class="r">♦</span></div>
+      <div class="brand">YANIV</div>
+      <div class="kicker">Score Club</div>
+    </div>
+    <button class="btn-gold full" style="margin-top:22px" onclick="newGame()">＋ Nouvelle partie</button>
+    <button class="btn-ghost full" style="margin-top:10px" onclick="openPalmares()">🏆 Palmarès du groupe</button>
+    <h2>Reprendre une partie</h2>
+    <div id="lobbyList"></div>
+  </section>
+
+  <!-- ============ TABLE ============ -->
+  <section id="view-table" class="view">
+    <div class="tbar">
+      <button class="btn-ghost ic" onclick="goLobby()">‹</button>
+      <div class="title" onclick="renameCurrent()">
+        <div class="lbl">Partie</div>
+        <div class="nm" id="gameTitle">—</div>
+      </div>
+      <button class="btn-ghost ic" id="speakBtn" onclick="toggleSpeak()" title="Annonce vocale">🔊</button>
+    </div>
+
+    <div class="seg">
+      <button id="seg-rank"  class="on" onclick="switchTab('rank')">Classement</button>
+      <button id="seg-hist"  onclick="switchTab('hist')">Historique</button>
+      <button id="seg-stats" onclick="switchTab('stats')">Stats</button>
+    </div>
+
+    <div id="tab-rank" class="tab on">
+      <div class="hud">
+        <div class="dealer" onclick="rerollDealer()" title="Tirer un nouveau distributeur">
+          <span class="ic2">🃏</span>
+          <div style="min-width:0">
+            <div class="lbl">Distributeur</div>
+            <div class="who" id="dealerName">—</div>
+          </div>
+        </div>
+        <button class="btn-ghost mini" onclick="rerollDealer()" title="Tirage aléatoire">🎲</button>
+        <div class="tmr" id="timer">00:00</div>
+      </div>
+      <div id="ranking" class="lb"></div>
+      <h2>Joueurs</h2>
+      <div id="players" class="players"></div>
+      <div class="addrow">
+        <input id="playerName" placeholder="Ajouter un joueur" maxlength="24" autocomplete="off">
+        <button class="btn-emer" onclick="addPlayer()">＋</button>
+      </div>
+    </div>
+
+    <div id="tab-hist" class="tab">
+      <div id="events"></div>
+      <h2>Manches</h2>
+      <div class="tablewrap">
+        <table><thead><tr id="historyHeader"><th>#</th></tr></thead><tbody id="history"></tbody></table>
+      </div>
+    </div>
+
+    <div id="tab-stats" class="tab">
+      <div id="stats" class="stat-grid"></div>
+      <h2>Rapport</h2>
+      <button class="btn-gold full" onclick="openReport()">📈 Rapport victoire / défaite</button>
+      <h2>Voix des annonces</h2>
+      <select id="voiceSel" onchange="onVoiceChange()"></select>
+      <button class="btn-ghost full" style="margin-top:8px" onclick="speak('Bonjour, voici la voix des annonces.')">🔊 Tester la voix</button>
+      <div class="muted" style="font-size:12px;margin-top:8px">« Auto » choisit une voix féminine si ton appareil en a une. Sinon installe-en une (iPhone : Réglages ▸ Accessibilité ▸ Contenu énoncé ▸ Voix ▸ Français) puis reviens ici.</div>
+      <h2>Règles</h2>
+      <button class="btn-ghost full" onclick="openRules()">⚙️ Règles de la partie</button>
+      <h2>Sauvegarde & partage</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn-ghost" onclick="exportAll()">💾 Exporter</button>
+        <button class="btn-ghost" onclick="importFileTrigger()">📥 Importer</button>
+        <button class="btn-ghost" onclick="shareCode()">🔗 Copier le code</button>
+        <button class="btn-ghost" onclick="importCode()">📋 Coller un code</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importFile(event)">
+      <div class="muted" style="font-size:12px;margin-top:8px">« Exporter » sauvegarde toutes tes parties dans un fichier. « Code » = envoyer la partie en cours par message (copier/coller).</div>
+      <h2>Options</h2>
+      <button class="btn-red full" onclick="deleteCurrent()">🗑️ Supprimer cette partie</button>
+    </div>
+  </section>
+</div>
+
+<!-- Barre d'action (table only) -->
+<div id="actionbar" class="actionbar" style="display:none">
+  <div class="inner" id="actionInner"></div>
+</div>
+
+<!-- Feuille de manche -->
+<div id="roundSheet" class="sheet-back" onclick="if(event.target===this)closeRound()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="roundTitle">Manche</h3>
+    <div class="sub">Touche une ligne, saisis les points au clavier</div>
+    <div id="draftRows"></div>
+    <div class="pad">
+      <button onclick="padKey('1')">1</button><button onclick="padKey('2')">2</button><button onclick="padKey('3')">3</button>
+      <button onclick="padKey('4')">4</button><button onclick="padKey('5')">5</button><button onclick="padKey('6')">6</button>
+      <button onclick="padKey('7')">7</button><button onclick="padKey('8')">8</button><button onclick="padKey('9')">9</button>
+      <button onclick="padKey('C')">C</button><button onclick="padKey('0')">0</button><button onclick="padKey('back')">⌫</button>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-red" id="delRoundBtn" style="display:none" onclick="deleteEditedRound()" title="Supprimer cette manche">🗑️</button>
+      <button class="btn-ghost" onclick="closeRound()">Annuler</button>
+      <button class="btn-emer" onclick="commitRound()">✔ Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale Rapport / Bilan -->
+<div id="reportModal" class="uiback" onclick="if(event.target===this)closeReport()">
+  <div class="uibox repbox">
+    <div id="reportBody"></div>
+    <button class="btn-ghost full" style="margin-top:14px" onclick="closeReport()">Fermer</button>
+  </div>
+</div>
+
+<!-- Modale Palmarès -->
+<div id="palmaresModal" class="uiback" onclick="if(event.target===this)closePalmares()">
+  <div class="uibox repbox">
+    <div id="palmaresBody"></div>
+    <button class="btn-ghost full" style="margin-top:14px" onclick="closePalmares()">Fermer</button>
+  </div>
+</div>
+
+<!-- Modale Règles -->
+<div id="rulesModal" class="uiback" onclick="if(event.target===this)closeRules()">
+  <div class="uibox">
+    <div class="t">⚙️ Règles de la partie</div>
+    <label class="rrow"><span>Défaite au-dessus de</span><input id="rLimit" type="tel" inputmode="numeric" pattern="[0-9]*" style="width:90px;text-align:center"></label>
+    <label class="rrow"><span>Pénalité Asaf (+)</span><input id="rAsaf" type="tel" inputmode="numeric" pattern="[0-9]*" style="width:90px;text-align:center"></label>
+    <label class="rrow"><span>Paliers −50 (50/100/150)</span><input id="rPal" type="checkbox"></label>
+    <label class="rrow"><span>« Yaniv » met les points à 0</span><input id="rYz" type="checkbox"></label>
+    <div class="f"><button class="btn-ghost" onclick="closeRules()">Annuler</button><button class="btn-gold" onclick="saveRules()">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- Modale générique (dialogues) -->
+<div id="uiModal" class="uiback" onclick="if(event.target===this)uiCancel()">
+  <div class="uibox">
+    <div class="t" id="uiTitle"></div>
+    <div class="m" id="uiMsg"></div>
+    <input id="uiInput" style="display:none" maxlength="40" autocomplete="off">
+    <div class="f">
+      <button class="btn-ghost" id="uiCancel" onclick="uiCancel()">Annuler</button>
+      <button class="btn-gold" id="uiOk" onclick="uiOk()">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let state={players:[],scores:{},history:[],events:[],stats:{}};
+const RESERVED_NAMES=['__proto__','constructor','prototype'];
+const MAX_EVENTS=50;
+const LIB_KEY='yaniv_v5', OLD_KEY='yaniv_pro_data';
+const VOICE_KEY='yaniv_voice';
+// limite de défaite désormais paramétrable par partie (state.rules.limit), défaut 200 — voir RULES()
+const CHART_COLORS=['#e9c886','#2fd39b','#6cb7ff','#ff7ad9','#ffa657','#e46a6a','#b28dff','#7ee787'];
+let library={currentId:null,games:{}};
+let curTab='rank', curView='lobby';
+let timerInt=null;
+let speakOn=true; try{ speakOn=localStorage.getItem(VOICE_KEY)!=='0'; }catch(e){}
+
+/* ---------- dialogues maison (marchent en mode app iOS, contrairement à prompt/confirm/alert) ---------- */
+let _uiRes=null,_uiInput=false;
+function uiOpen(o){return new Promise(res=>{_uiRes=res;_uiInput=!!o.input;
+  const T=document.getElementById('uiTitle'),M=document.getElementById('uiMsg'),I=document.getElementById('uiInput'),
+        OK=document.getElementById('uiOk'),C=document.getElementById('uiCancel');
+  T.textContent=o.title||'';T.style.display=o.title?'block':'none';
+  M.textContent=o.message||'';M.style.display=o.message?'block':'none';
+  if(o.input){I.style.display='block';I.value=o.value||'';}else I.style.display='none';
+  OK.textContent=o.okLabel||'OK';OK.className=o.danger?'btn-red':'btn-gold';
+  C.style.display=o.noCancel?'none':'';
+  document.getElementById('uiModal').classList.add('open');
+  if(o.input)setTimeout(()=>{try{I.focus();I.select();}catch(e){}},60);
+});}
+function uiClose(v){document.getElementById('uiModal').classList.remove('open');const r=_uiRes;_uiRes=null;if(r)r(v);}
+function uiOk(){uiClose(_uiInput?document.getElementById('uiInput').value:true);}
+function uiCancel(){uiClose(_uiInput?null:false);}
+function uiAlert(m){return uiOpen({message:m,noCancel:true});}
+function uiConfirm(m){return uiOpen({message:m,okLabel:'Confirmer',danger:true});}
+function uiPrompt(t,def){return uiOpen({title:t,input:true,value:def,okLabel:'Valider'});}
+
+/* ---------- utils ---------- */
+function escapeHtml(s){const d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
+function csvEscape(f){const s=String(f);return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+function logEvent(t,x){state.events.unshift({type:t,text:x,timestamp:Date.now()});if(state.events.length>MAX_EVENTS)state.events.length=MAX_EVENTS;}
+function uid(){return 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function blankState(){return {players:[],scores:{},history:[],events:[],stats:{},dealer:null,startedAt:null,endedAt:null,finished:false,rules:defaultRules()};}
+function sanitizeState(p){p=p||{};const r=p.rules||{};return{
+  players:Array.isArray(p.players)?p.players:[],
+  scores:(p.scores&&typeof p.scores==='object')?p.scores:{},
+  history:Array.isArray(p.history)?p.history:[],
+  events:Array.isArray(p.events)?p.events:[],
+  stats:(p.stats&&typeof p.stats==='object')?p.stats:{},
+  dealer:typeof p.dealer==='string'?p.dealer:null,
+  startedAt:typeof p.startedAt==='number'?p.startedAt:null,
+  endedAt:typeof p.endedAt==='number'?p.endedAt:null,
+  finished:!!p.finished,
+  rules:{limit:Number.isFinite(r.limit)?r.limit:200,asaf:Number.isFinite(r.asaf)?r.asaf:30,paliers:r.paliers!==false,yanivZero:r.yanivZero!==false}};}
+function defaultName(){const d=new Date(),p=n=>String(n).padStart(2,'0');
+  return `Partie du ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function fmtDate(ts){if(!ts)return '—';const d=new Date(ts),p=n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)} · ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function fmtDur(ms){ms=Math.max(0,ms||0);const s=Math.floor(ms/1000),m=Math.floor(s/60);
+  return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+
+/* ---------- distributeur (mélangeur) ---------- */
+function pickDealer(){if(!state.players.length){state.dealer=null;return;}
+  if(state.players.length===1){state.dealer=state.players[0];return;}
+  let n;do{n=state.players[Math.floor(Math.random()*state.players.length)];}while(n===state.dealer); // évite de retomber sur le même
+  state.dealer=n;}
+function ensureDealer(){if(!state.dealer||!state.players.includes(state.dealer))pickDealer();}
+function advanceDealer(){if(!state.players.length){state.dealer=null;return;}
+  let i=state.players.indexOf(state.dealer);i=(i+1)%state.players.length;state.dealer=state.players[i];}
+function rerollDealer(){if(!state.players.length||state.finished)return;
+  pickDealer();logEvent('bonus',`🃏 ${state.dealer} distribue`);speak(`${state.dealer} distribue`);save();render();}
+
+/* ---------- règles paramétrables ---------- */
+function defaultRules(){return{limit:200,asaf:30,paliers:true,yanivZero:true};}
+function RULES(){const r=state.rules||{};return{
+  limit:Number.isFinite(r.limit)?r.limit:200,
+  asaf:Number.isFinite(r.asaf)?r.asaf:30,
+  paliers:r.paliers!==false,
+  yanivZero:r.yanivZero!==false};}
+
+/* ---------- palier -50 ----------
+   Paliers = tous les multiples de 50 jusqu'à la limite INCLUSE (50,100,150,200…).
+   Atterrir pile sur la limite (200) déclenche donc −50 (→150) ; seul un dépassement (201+) fait perdre. */
+function isPalier(cum){const R=RULES();return R.paliers&&cum>0&&cum%50===0&&cum<=R.limit;}
+function nextPalier(score){const lim=RULES().limit;const next=Math.floor(score/50)*50+50;return next<=lim?{target:next,remaining:next-score}:null;}
+
+/* ---------- annonce vocale (voix féminine, débit posé) ---------- */
+let autoVoice=null;      // meilleure voix féminine détectée automatiquement
+let chosenURI='';        // voix choisie manuellement par l'utilisateur (voiceURI)
+try{ chosenURI=localStorage.getItem('yaniv_voice_uri')||''; }catch(e){}
+// noms de voix FÉMININES connus (FR + autres langues, tous OS/navigateurs)
+const FEMALE_RE=/(aur[eé]lie|am[eé]lie|audrey|marie|julie|caroline|hortense|virginie|c[eé]line|charlotte|elise|l[eé]a|sandy|samantha|karen|moira|tessa|victoria|fiona|serena|allison|ava|susan|zira|aria|jenny|sonia|nora|alice|eloquence|female|femme|woman|girl|google fran)/i;
+const MALE_RE=/(paul|thomas|claude|nicolas|henri|daniel|male|homme|\bman\b|fred|george|rishi|aaron|arthur)/i;
+function allVoices(){try{return (window.speechSynthesis&&window.speechSynthesis.getVoices())||[];}catch(e){return [];}}
+function loadVoices(){
+  const all=allVoices();const fr=all.filter(v=>/^fr/i.test(v.lang));
+  autoVoice = fr.find(v=>FEMALE_RE.test(v.name))       // 1) voix FR féminine
+           || all.find(v=>FEMALE_RE.test(v.name))      // 2) voix féminine (autre langue)
+           || fr.find(v=>!MALE_RE.test(v.name))        // 3) voix FR non-masculine
+           || fr[0] || all[0] || null;                 // 4) défaut
+  populateVoiceSelect();
+}
+function currentVoice(){const all=allVoices();
+  if(chosenURI){const c=all.find(v=>v.voiceURI===chosenURI);if(c)return c;}
+  return autoVoice;}
+if(window.speechSynthesis){ loadVoices(); try{window.speechSynthesis.onvoiceschanged=loadVoices;}catch(e){} }
+
+function populateVoiceSelect(){const sel=document.getElementById('voiceSel');if(!sel)return;
+  const all=allVoices();
+  if(!all.length){sel.innerHTML='<option value="">Voix indisponibles sur cet appareil</option>';return;}
+  const list=all.slice().sort((a,b)=>{const af=/^fr/i.test(a.lang)?0:1,bf=/^fr/i.test(b.lang)?0:1;return af-bf||a.name.localeCompare(b.name);});
+  sel.innerHTML='<option value="">✨ Auto (féminine)</option>'+list.map(v=>{
+    const fem=FEMALE_RE.test(v.name)?'♀ ':'';
+    return `<option value="${escapeHtml(v.voiceURI)}" ${v.voiceURI===chosenURI?'selected':''}>${fem}${escapeHtml(v.name)} · ${escapeHtml(v.lang)}</option>`;
+  }).join('');}
+function onVoiceChange(){const sel=document.getElementById('voiceSel');if(!sel)return;
+  chosenURI=sel.value;try{localStorage.setItem('yaniv_voice_uri',chosenURI);}catch(e){}
+  speakOn=true;setSpeakBtn();speak('Voici la voix des annonces.');}
+
+function setSpeakBtn(){const b=document.getElementById('speakBtn');if(b)b.textContent=speakOn?'🔊':'🔇';}
+function toggleSpeak(){speakOn=!speakOn;try{localStorage.setItem(VOICE_KEY,speakOn?'1':'0');}catch(e){}
+  setSpeakBtn();if(speakOn)speak('Annonces activées');else if(window.speechSynthesis)window.speechSynthesis.cancel();}
+function speak(text){if(!speakOn)return;try{const sy=window.speechSynthesis;if(!sy)return;
+  if(!autoVoice)loadVoices();
+  const v=currentVoice();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang = v? v.lang : 'fr-FR';
+  u.rate=0.85;   // débit lent = ton posé / sensuel
+  u.pitch=1.15;  // timbre plus clair = féminin
+  if(v)u.voice=v;
+  sy.cancel();sy.speak(u);}catch(e){}}
+function announceDealer(){if(state.dealer)speak(`${state.dealer}, à toi de distribuer.`);}
+// une seule annonce (speak() annule la précédente) : scores + nouveau distributeur tiré au sort
+function announceRoundEnd(){const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);if(!arr.length)return;
+  let txt='Fin de la manche. '+arr.map(([n,s])=>`${n}, ${s}`).join('. ')+'.';
+  if(state.dealer)txt+=` ${state.dealer}, à toi de distribuer.`;
+  speak(txt);}
+
+/* ---------- fin de partie ---------- */
+function checkEnd(){if(state.finished)return false;
+  if(state.players.some(p=>(state.scores[p]||0)>RULES().limit)){
+    state.finished=true;state.endedAt=Date.now();
+    const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
+    logEvent('bonus',`🏆 Partie terminée — ${arr[0][0]} gagne`);
+    return true;
+  }
+  return false;}
+function announceEnd(){const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);if(!arr.length)return;
+  const losers=arr.filter(([n,s])=>s>RULES().limit).map(x=>x[0]);
+  speak(`Partie terminée. ${arr[0][0]} gagne avec ${arr[0][1]} points. ${losers.join(' et ')} a dépassé ${RULES().limit} et a perdu.`);}
+
+/* ---------- haptique + confettis ---------- */
+function buzz(pat){try{if(navigator.vibrate)navigator.vibrate(pat);}catch(e){}}
+function confetti(){try{
+  const cv=document.createElement('canvas');cv.style.cssText='position:fixed;inset:0;z-index:300;pointer-events:none';
+  const ctx=cv.getContext('2d');const W=cv.width=window.innerWidth,H=cv.height=window.innerHeight;
+  const cols=['#e9c886','#2fd39b','#6cb7ff','#ff7ad9','#ffa657','#ffffff'];
+  const parts=[];for(let i=0;i<130;i++)parts.push({x:W/2,y:H*0.28,vx:(Math.random()-0.5)*13,vy:Math.random()*-13-4,g:0.3+Math.random()*0.25,s:6+Math.random()*7,c:cols[i%cols.length],r:Math.random()*6,vr:(Math.random()-0.5)*0.4});
+  document.body.appendChild(cv);let t=0;
+  (function frame(){t++;ctx.clearRect(0,0,W,H);parts.forEach(p=>{p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);ctx.restore();});
+    if(t<130)requestAnimationFrame(frame);else cv.remove();})();
+}catch(e){}}
+function installMeta(){try{
+  const icon="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='104' fill='#0a0c0b'/><text x='256' y='372' font-size='320' text-anchor='middle' fill='#e9c886' font-family='Georgia,serif'>♠</text></svg>");
+  const man={name:'Yaniv Club',short_name:'Yaniv',display:'standalone',background_color:'#0a0c0b',theme_color:'#0a0c0b',start_url:'.',icons:[{src:icon,sizes:'512x512',type:'image/svg+xml',purpose:'any'}]};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
+  const l=document.createElement('link');l.rel='manifest';l.href=url;document.head.appendChild(l);
+  const a=document.createElement('link');a.rel='apple-touch-icon';a.href=icon;document.head.appendChild(a);
+}catch(e){}}
+
+/* ---------- timer ---------- */
+function updateTimer(){const el=document.getElementById('timer');if(!el)return;
+  if(!state.startedAt){el.textContent='00:00';el.classList.remove('end');return;}
+  const end=(state.finished&&state.endedAt)?state.endedAt:Date.now();
+  el.textContent=fmtDur(end-state.startedAt);
+  el.classList.toggle('end',!!state.finished);}
+
+/* ---------- graphique (trajectoire des scores) ---------- */
+function buildSeries(){const series={};state.players.forEach(p=>series[p]=[0]);
+  const run={};state.players.forEach(p=>run[p]=0);
+  state.history.forEach(round=>{state.players.forEach(p=>{const c=round[p];
+    if(c){run[p]+=c.score;if(c.bonus)run[p]-=50;}series[p].push(run[p]);});});
+  return series;}
+function chartSVG(){
+  const series=buildSeries(),names=state.players,rounds=state.history.length;
+  const W=560,H=260,PL=40,PR=16,PT=16,PB=28;
+  let maxV=200;names.forEach(p=>series[p].forEach(v=>{if(v>maxV)maxV=v;}));maxV+=20;
+  const nx=Math.max(1,rounds);
+  const X=i=>PL+(i*(W-PL-PR)/nx),Y=v=>PT+(H-PT-PB)*(1-(v/maxV));
+  let g='';
+  [50,100,150].forEach(t=>{if(t<maxV)g+=`<line x1="${PL}" y1="${Y(t).toFixed(1)}" x2="${W-PR}" y2="${Y(t).toFixed(1)}" stroke="rgba(233,200,134,.12)"/><text x="${PL-6}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end" fill="#9b998b" font-size="10" font-family="monospace">${t}</text>`;});
+  g+=`<line x1="${PL}" y1="${Y(200).toFixed(1)}" x2="${W-PR}" y2="${Y(200).toFixed(1)}" stroke="rgba(228,106,106,.6)" stroke-dasharray="5 4"/><text x="${W-PR}" y="${(Y(200)-5).toFixed(1)}" text-anchor="end" fill="#e46a6a" font-size="10" font-family="monospace">200 · défaite</text>`;
+  names.forEach((p,idx)=>{const col=CHART_COLORS[idx%CHART_COLORS.length];
+    const pts=series[p].map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+    g+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const li=series[p].length-1;g+=`<circle cx="${X(li).toFixed(1)}" cy="${Y(series[p][li]).toFixed(1)}" r="3.5" fill="${col}"/>`;});
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;}
+
+/* ---------- rapport / bilan ---------- */
+function renderReport(){
+  const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);let html='';
+  if(state.finished&&arr.length){
+    const losers=arr.filter(([n,s])=>s>RULES().limit).map(x=>x[0]);
+    html+=`<div class="bilan"><div class="crown">🏆</div>
+      <div class="win">${escapeHtml(arr[0][0])} remporte la partie</div>
+      <div class="muted" style="font-family:var(--mono);margin-top:2px">${arr[0][1]} pts</div>
+      ${losers.length?`<div class="lose">💀 ${losers.map(escapeHtml).join(', ')} a dépassé ${RULES().limit} — éliminé</div>`:''}
+      <div class="dur">⏱ Durée : ${fmtDur((state.endedAt||0)-(state.startedAt||state.endedAt||0))} · ${state.history.length} manches</div></div>`;
+  }else{
+    html+=`<div style="font-family:var(--serif);font-size:22px;color:var(--gold);text-align:center;margin-bottom:4px">📈 Rapport</div>
+      <div class="muted" style="text-align:center;font-size:13px;margin-bottom:8px">Trajectoire des scores — plus la courbe est basse, mieux c'est</div>`;
+  }
+  if(state.history.length&&state.players.length){
+    html+=chartSVG();
+    html+=`<div class="legend">${state.players.map((p,idx)=>`<span><i style="background:${CHART_COLORS[idx%CHART_COLORS.length]}"></i>${escapeHtml(p)}</span>`).join('')}</div>`;
+  }else{html+='<div class="empty">Pas encore de manche à afficher.</div>';}
+  if(arr.length){html+='<h2 style="margin-top:20px">Classement final</h2>';
+    html+=arr.map((x,i)=>`<div class="lb-row" style="margin-bottom:8px"><div class="rk">${['🥇','🥈','🥉'][i]||('#'+(i+1))}</div><div class="col"><div class="nm2">${escapeHtml(x[0])}</div></div><div class="sc" style="font-size:20px">${x[1]}<small>pts</small></div></div>`).join('');}
+  document.getElementById('reportBody').innerHTML=html;}
+function openReport(){renderReport();document.getElementById('reportModal').classList.add('open');}
+function closeReport(){document.getElementById('reportModal').classList.remove('open');}
+
+/* ---------- palmarès du groupe (toutes parties) ---------- */
+function computePalmares(){const map={};
+  Object.values(library.games).forEach(g=>{const st=g&&g.state;if(!st||!Array.isArray(st.players))return;
+    const lim=(st.rules&&Number.isFinite(st.rules.limit))?st.rules.limit:200;
+    const finished=!!st.finished;
+    const arr=Object.entries(st.scores||{}).sort((a,b)=>a[1]-b[1]);
+    const winner=(finished&&arr.length)?arr[0][0]:null;
+    st.players.forEach(p=>{const k=(p||'').trim().toLowerCase();if(!k)return;
+      if(!map[k])map[k]={name:p,parties:0,fin:0,wins:0,losses:0,sum:0};
+      map[k].parties++;
+      if(finished){map[k].fin++;const sc=(st.scores&&st.scores[p])||0;map[k].sum+=sc;
+        if(p===winner)map[k].wins++;if(sc>lim)map[k].losses++;}});});
+  return Object.values(map).sort((a,b)=>b.wins-a.wins||a.parties-b.parties||a.name.localeCompare(b.name));}
+function openPalmares(){const rows=computePalmares();
+  let html='<div style="font-family:var(--serif);font-size:24px;color:var(--gold);text-align:center;margin-bottom:10px">🏆 Palmarès du groupe</div>';
+  if(!rows.length)html+='<div class="empty">Aucune partie enregistrée pour l\'instant.</div>';
+  else{html+='<div class="tablewrap"><table><thead><tr><th>#</th><th>Joueur</th><th>🏆</th><th>💀</th><th>Parties</th><th>Moy.</th></tr></thead><tbody>'+
+    rows.map((r,i)=>`<tr><td>${['🥇','🥈','🥉'][i]||('#'+(i+1))}</td><td>${escapeHtml(r.name)}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.parties}</td><td>${r.fin?Math.round(r.sum/r.fin):'—'}</td></tr>`).join('')+
+    '</tbody></table></div><div class="muted" style="font-size:12px;margin-top:10px">🏆 victoires · 💀 dépassements de la limite · Moy. = score final moyen sur les parties terminées.</div>';}
+  document.getElementById('palmaresBody').innerHTML=html;
+  document.getElementById('palmaresModal').classList.add('open');}
+function closePalmares(){document.getElementById('palmaresModal').classList.remove('open');}
+
+/* ---------- règles ---------- */
+function openRules(){const R=RULES();
+  document.getElementById('rLimit').value=R.limit;
+  document.getElementById('rAsaf').value=R.asaf;
+  document.getElementById('rPal').checked=R.paliers;
+  document.getElementById('rYz').checked=R.yanivZero;
+  document.getElementById('rulesModal').classList.add('open');}
+function closeRules(){document.getElementById('rulesModal').classList.remove('open');}
+function saveRules(){let lim=parseInt(document.getElementById('rLimit').value,10);if(isNaN(lim)||lim<10)lim=200;
+  let as=parseInt(document.getElementById('rAsaf').value,10);if(isNaN(as)||as<0)as=30;
+  state.rules={limit:lim,asaf:as,paliers:document.getElementById('rPal').checked,yanivZero:document.getElementById('rYz').checked};
+  recompute();
+  const over=state.players.some(p=>(state.scores[p]||0)>lim);
+  state.finished=over;if(!over)state.endedAt=null;else if(!state.endedAt)state.endedAt=Date.now();
+  save();render();closeRules();}
+
+/* ---------- sauvegarde / partage ---------- */
+function download(fn,txt){const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=fn;
+  document.body.appendChild(a);a.click();setTimeout(()=>{try{URL.revokeObjectURL(a.href);}catch(e){}a.remove();},50);}
+function exportAll(){download('yaniv-sauvegarde.json',JSON.stringify(library));uiAlert("Sauvegarde téléchargée (yaniv-sauvegarde.json).");}
+function importFileTrigger(){document.getElementById('importFile').click();}
+function importFile(ev){const f=ev.target.files&&ev.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{mergeLibrary(JSON.parse(rd.result));}catch(e){uiAlert("Fichier illisible.");}ev.target.value='';};rd.readAsText(f);}
+function mergeLibrary(data){let games=null;
+  if(data&&data.games&&typeof data.games==='object')games=Object.values(data.games);
+  else if(data&&data.players)games=[{name:data.name||'Partie importée',state:data}];
+  else if(data&&data.state)games=[data];
+  if(!games||!games.length){uiAlert("Aucune partie trouvée dans ce fichier.");return;}
+  let n=0;games.forEach(g=>{if(!g||!g.state)return;const id=uid();
+    library.games[id]={id,name:g.name||'Partie importée',createdAt:g.createdAt||Date.now(),updatedAt:g.updatedAt||Date.now(),state:sanitizeState(g.state)};n++;});
+  persist();render();uiAlert(n+' partie(s) importée(s).');}
+function b64enc(s){return btoa(unescape(encodeURIComponent(s)));}
+function b64dec(s){return decodeURIComponent(escape(atob(s)));}
+function shareCode(){const g=library.games[library.currentId];if(!g){uiAlert("Aucune partie en cours.");return;}
+  const code='YANIV1:'+b64enc(JSON.stringify({name:g.name,state:g.state}));
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(code).then(()=>uiAlert("Code copié ! Colle-le dans un message pour envoyer la partie."),()=>uiPrompt('Copie ce code :',code));
+  else uiPrompt('Copie ce code :',code);}
+function importCode(){uiPrompt('Colle le code de partage reçu :','').then(code=>{if(!code)return;code=code.trim();
+  if(code.indexOf('YANIV1:')===0)code=code.slice(7);
+  try{const o=JSON.parse(b64dec(code));if(!o||!o.state)throw 0;const id=uid();
+    library.games[id]={id,name:o.name||'Partie reçue',createdAt:Date.now(),updatedAt:Date.now(),state:sanitizeState(o.state)};
+    persist();render();uiAlert('Partie « '+(o.name||'reçue')+' » importée !');
+  }catch(e){uiAlert("Code invalide.");}});}
+
+/* ---------- persistance ---------- */
+function persist(){const g=library.games[library.currentId];if(g){g.state=state;g.updatedAt=Date.now();}
+  try{localStorage.setItem(LIB_KEY,JSON.stringify(library));}catch(e){console.error('save',e);}}
+function save(){persist();}
+function activate(id){const g=library.games[id];if(!g)return;library.currentId=id;state=sanitizeState(g.state);g.state=state;render();}
+function createGame(name,doPersist){const id=uid();
+  library.games[id]={id,name:(name||defaultName()),createdAt:Date.now(),updatedAt:Date.now(),state:blankState()};
+  library.currentId=id;state=library.games[id].state;render();if(doPersist!==false)persist();return id;}
+function loadLibrary(){
+  let raw=localStorage.getItem(LIB_KEY);
+  if(raw){try{const p=JSON.parse(raw);if(p&&p.games&&typeof p.games==='object')library={currentId:p.currentId||null,games:p.games};}
+    catch(e){uiAlert("Parties corrompues : nouvelle bibliothèque.");library={currentId:null,games:{}};}}
+  else{let old=localStorage.getItem(OLD_KEY);if(old){try{const s=sanitizeState(JSON.parse(old));const id=uid();
+    library.games[id]={id,name:'Partie récupérée',createdAt:Date.now(),updatedAt:Date.now(),state:s};library.currentId=id;}catch(e){}}}
+  if(!library.currentId||!library.games[library.currentId]){
+    const ids=Object.keys(library.games);
+    if(ids.length){ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));library.currentId=ids[0];}
+    else createGame(defaultName(),false);
+  }
+  activate(library.currentId);persist();
+}
+
+/* ---------- navigation ---------- */
+function showView(v){curView=v;
+  document.getElementById('view-lobby').classList.toggle('on',v==='lobby');
+  document.getElementById('view-table').classList.toggle('on',v==='table');
+  document.getElementById('actionbar').style.display = (v==='table')?'block':'none';
+  window.scrollTo(0,0);
+}
+function goLobby(){persist();render();showView('lobby');}
+function goTable(){showView('table');switchTab('rank');}
+function switchTab(t){curTab=t;
+  ['rank','hist','stats'].forEach(k=>{
+    document.getElementById('tab-'+k).classList.toggle('on',k===t);
+    document.getElementById('seg-'+k).classList.toggle('on',k===t);
+  });
+  if(t==='stats')populateVoiceSelect(); // les voix peuvent charger tardivement
+}
+
+/* ---------- parties ---------- */
+function updateTitle(){const g=library.games[library.currentId];document.getElementById('gameTitle').textContent=g?g.name:'—';}
+function newGame(){uiPrompt('Nom de la nouvelle partie',defaultName()).then(name=>{
+  if(name===null)return;persist();createGame((name||'').trim()||defaultName());goTable();});}
+function reprendre(id){if(!library.games[id])return;persist();activate(id);goTable();}
+function deleteGame(id){const g=library.games[id];if(!g)return Promise.resolve(false);
+  return uiConfirm(`Supprimer « ${g.name} » ? Cette action est définitive.`).then(ok=>{
+    if(!ok)return false;delete library.games[id];
+    if(library.currentId===id){const ids=Object.keys(library.games);
+      if(ids.length){ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));activate(ids[0]);}
+      else createGame(defaultName(),false);}
+    persist();render();return true;});}
+function deleteCurrent(){deleteGame(library.currentId).then(done=>{if(done&&curView==='table')showView('lobby');});}
+function renameGame(id){const g=library.games[id];if(!g)return;
+  uiPrompt('Nouveau nom de la partie',g.name).then(name=>{if(name===null)return;
+    g.name=(name||'').trim()||g.name;persist();render();});}
+function renameCurrent(){if(library.currentId)renameGame(library.currentId);}
+
+/* ---------- joueurs ---------- */
+function addPlayer(){const input=document.getElementById('playerName');let n=input.value.trim();if(!n)return;
+  if(n.length>24){uiAlert("Nom trop long (24 caractères max).");return;}
+  if(RESERVED_NAMES.includes(n)){uiAlert("Ce nom n'est pas autorisé.");return;}
+  if(state.players.some(p=>p.toLowerCase()===n.toLowerCase())){uiAlert(`"${n}" est déjà dans la partie.`);return;}
+  state.players.push(n);state.scores[n]=0;state.stats[n]={yaniv:0,asaf:0,bonus:0};
+  input.value='';input.focus();save();render();}
+function removePlayer(name){if(!state.players.includes(name))return;
+  if(state.players.length<=1){uiAlert("Impossible de supprimer le dernier joueur.");return;}
+  uiConfirm(`Retirer "${name}" de la partie ?`).then(ok=>{if(!ok)return;
+    state.players=state.players.filter(p=>p!==name);delete state.scores[name];delete state.stats[name];
+    state.history.forEach(r=>{delete r[name];});recompute();logEvent('asaf',`🗑️ ${name} retiré de la partie`);save();render();});}
+
+/* ---------- rendu ---------- */
+function render(){
+  updateTitle();
+  if(state.players.length&&!state.finished)ensureDealer();
+  // Lobby
+  const ids=Object.keys(library.games).sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));
+  document.getElementById('lobbyList').innerHTML = ids.length? ids.map(id=>{
+    const g=library.games[id],cur=id===library.currentId,st=g.state||{};
+    const pc=Array.isArray(st.players)?st.players.length:0,rc=Array.isArray(st.history)?st.history.length:0;
+    return `<div class="g-item ${cur?'cur':''}">
+      <div class="g-main" onclick="reprendre('${g.id}')">
+        <div class="g-name">${escapeHtml(g.name)} ${cur?'🟢':''}</div>
+        <div class="g-meta">${pc} joueur(s) · ${rc} manche(s) · ${fmtDate(g.updatedAt)}</div>
+      </div>
+      <div class="g-act">
+        <button class="btn-gold" onclick="reprendre('${g.id}')">▶</button>
+        <button class="btn-ghost" onclick="renameGame('${g.id}')">✏️</button>
+        <button class="btn-red" onclick="deleteGame('${g.id}')">🗑️</button>
+      </div></div>`;
+  }).join('') : '<div class="empty">Aucune partie enregistrée.<br>Lance-en une nouvelle ci-dessus.</div>';
+
+  // Distributeur
+  document.getElementById('dealerName').textContent = state.players.length ? (state.dealer||'—') : '—';
+
+  // Classement
+  const R=RULES();
+  let arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
+  const mn=arr.length?arr[0][1]:null, mx=arr.length?arr[arr.length-1][1]:null, spread=arr.length>1&&mn!==mx;
+  document.getElementById('ranking').innerHTML = arr.length? arr.map((x,i)=>{
+    const name=x[0], sc=x[1];
+    const lead=spread&&sc===mn, last=spread&&sc===mx, dead=sc>R.limit;
+    const medal=['🥇','🥈','🥉'][i]||('#'+(i+1));
+    const np=R.paliers?nextPalier(sc):null;
+    const hint = dead ? `💀 a dépassé ${R.limit} — éliminé`
+      : (!R.paliers ? '' : (np ? `🎯 −50 dans ${np.remaining} pt${np.remaining>1?'s':''} (palier ${np.target})` : ''));
+    const isDealer = (!state.finished && name===state.dealer);
+    return `<div class="lb-row ${lead?'lead':''} ${last?'last':''} ${dead?'dead':''}">
+      <div class="rk">${medal}</div>
+      <div class="col"><div class="nm2">${escapeHtml(name)}${isDealer?'<span class="dchip">🃏 donne</span>':''}</div><div class="sub2">${hint}</div></div>
+      <div class="sc">${sc}<small>pts</small></div></div>`;
+  }).join('') : '<div class="empty">Ajoute des joueurs pour démarrer ↓</div>';
+
+  // Joueurs
+  document.getElementById('players').innerHTML = state.players.length? state.players.map((p,i)=>
+    `<span class="pchip"><span class="nm" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(p)}</span>
+     <button class="x remove-player-btn" data-index="${i}">✕</button></span>`).join('') : '<div class="muted" style="font-size:14px">Aucun joueur</div>';
+
+  // Events
+  document.getElementById('events').innerHTML = state.events.length?
+    state.events.slice(0,6).map(e=>`<div class="ev ${e.type}">${escapeHtml(e.text)}</div>`).join('')
+    : '<div class="empty">Aucun événement</div>';
+
+  // Historique
+  document.getElementById('historyHeader').innerHTML='<th>#</th>'+state.players.map(p=>`<th>${escapeHtml(p)}</th>`).join('');
+  document.getElementById('history').innerHTML = state.history.length? state.history.map((h,i)=>
+    `<tr onclick="openRound(${i})" style="cursor:pointer" title="Toucher pour modifier ou supprimer cette manche"><td><b>R${i+1}</b> ✏️</td>${state.players.map(p=>{let c=h[p];if(!c)return '<td>-</td>';
+      let m=String(c.score);if(c.yaniv)m+=' 🎖️';if(c.asaf)m+=' ⚔️';if(c.bonus)m+=' ⤵️';return `<td>${escapeHtml(m)}</td>`;}).join('')}</tr>`
+    ).join('') : `<tr><td colspan="${state.players.length+1}" class="muted">Aucune manche</td></tr>`;
+
+  // Stats
+  document.getElementById('stats').innerHTML = state.players.length? state.players.map(p=>{
+    let s=state.stats[p]||{yaniv:0,asaf:0,bonus:0};
+    return `<div class="stat-tile"><div class="n">${escapeHtml(p)}</div>
+      <div class="l"><span>🎖️ ${s.yaniv||0}</span><span>⚔️ ${s.asaf||0}</span><span>⤵️ ${s.bonus||0}</span></div></div>`;
+  }).join('') : '<div class="empty">Aucune statistique</div>';
+
+  // Barre d'action
+  const ab=document.getElementById('actionInner');
+  if(ab){
+    if(state.finished){
+      ab.innerHTML=`<div style="display:flex;gap:10px">
+        <button class="btn-gold" style="flex:1;padding:16px;font-size:16px" onclick="openReport()">🏆 Bilan</button>
+        <button class="btn-emer" style="flex:1;padding:16px;font-size:16px" onclick="rematch()">🔁 Revanche</button>
+        <button class="btn-ghost" style="padding:16px" onclick="undoRound()" title="Annuler la dernière manche">↩️</button></div>`;
+    }else{
+      ab.innerHTML=`<div style="display:flex;gap:10px">
+        <button class="btn-gold" style="flex:1;padding:16px;font-size:16px" onclick="openRound()">＋ Nouvelle manche</button>
+        ${state.history.length?`<button class="btn-ghost" style="padding:16px" onclick="undoRound()" title="Annuler la dernière manche">↩️</button>`:''}</div>`;
+    }
+  }
+  updateTimer();
+}
+
+document.getElementById('players').addEventListener('click',e=>{
+  const b=e.target.closest('.remove-player-btn');if(!b)return;
+  const n=state.players[parseInt(b.dataset.index,10)];if(n!==undefined)removePlayer(n);});
+document.getElementById('playerName').addEventListener('keydown',e=>{if(e.key==='Enter')addPlayer();});
+document.getElementById('uiInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();uiOk();}});
+
+/* ---------- logique de jeu ----------
+   Le palier −50 est DÉRIVÉ ici (pas juste lu) : indispensable pour que l'édition/suppression
+   d'une manche recalcule correctement les paliers des manches suivantes. */
+function recompute(){
+  const R=RULES();
+  for(let p of state.players)state.scores[p]=0;
+  state.players.forEach(p=>state.stats[p]={yaniv:0,asaf:0,bonus:0});
+  for(let round of state.history){for(let p of state.players){const c=round[p];if(!c)continue;
+    state.scores[p]+=c.score;
+    const bonus = c.score>0 && isPalier(state.scores[p]);
+    c.bonus=bonus; // recalculé pour l'affichage/historique
+    if(bonus){state.scores[p]-=50;state.stats[p].bonus++;}
+    if(c.yaniv)state.stats[p].yaniv++;
+    if(c.asaf)state.stats[p].asaf++;}}
+}
+
+/* ---------- feuille de manche (keypad) ---------- */
+let draft=[], sel=0, editIndex=null;
+// cumul AVANT une manche donnée (pour projeter correctement en édition)
+function scoresBefore(idx){const sc={};state.players.forEach(p=>sc[p]=0);
+  for(let k=0;k<idx&&k<state.history.length;k++){const r=state.history[k];
+    state.players.forEach(p=>{const c=r[p];if(c){sc[p]+=c.score;if(c.bonus)sc[p]-=50;}});}
+  return sc;}
+function draftBase(){return editIndex!=null?scoresBefore(editIndex):state.scores;}
+function openRound(idx){
+  if(!state.players.length){uiAlert("Ajoute au moins un joueur avant de saisir une manche.");return;}
+  editIndex = (typeof idx==='number') ? idx : null;
+  if(editIndex===null && state.finished){uiAlert("Partie terminée. Corrige une manche (onglet Historique), lance une revanche, ou annule la dernière.");return;}
+  ensureDealer();
+  const R=RULES();
+  if(editIndex!=null){
+    const r=state.history[editIndex]||{};
+    draft=state.players.map(p=>{const c=r[p];if(!c)return{pts:'',yaniv:false,asaf:false};
+      let raw=(c.score||0)-(c.asaf?R.asaf:0);if(raw<0)raw=0;
+      return{pts:String(raw),yaniv:!!c.yaniv,asaf:!!c.asaf};});
+    document.getElementById('roundTitle').textContent='Modifier la manche '+(editIndex+1);
+    document.getElementById('delRoundBtn').style.display='';
+  }else{
+    draft=state.players.map(()=>({pts:'',yaniv:false,asaf:false}));
+    document.getElementById('roundTitle').textContent='Manche '+(state.history.length+1);
+    document.getElementById('delRoundBtn').style.display='none';
+  }
+  sel=0;renderDraft();document.getElementById('roundSheet').classList.add('open');
+  // pas d'annonce ici : « qui distribue » est dit APRÈS la validation des points
+}
+function closeRound(){editIndex=null;document.getElementById('roundSheet').classList.remove('open');}
+function selectRow(i){sel=i;renderDraft();}
+function padKey(k){const d=draft[sel];if(!d)return;
+  if(k==='C')d.pts='';
+  else if(k==='back')d.pts=d.pts.slice(0,-1);
+  else{if(d.pts.length>=3)return;if(d.pts==='0')d.pts='';d.pts=(d.pts+k);}
+  renderDraft();}
+function toggleChip(i,kind){const d=draft[i];if(!d)return;
+  if(kind==='y'){d.yaniv=!d.yaniv;if(d.yaniv){if(RULES().yanivZero)d.pts='0';d.asaf=false;}}
+  else{d.asaf=!d.asaf;if(d.asaf)d.yaniv=false;}
+  sel=i;renderDraft();}
+function renderDraft(){
+  const R=RULES(),base=draftBase();
+  document.getElementById('draftRows').innerHTML=state.players.map((p,i)=>{
+    const d=draft[i];const raw=parseInt(d.pts||'0',10)||0;const score=d.asaf?raw+R.asaf:raw;
+    const b=base[p]||0;const fut=b+score;const bonus=score>0&&isPalier(fut);
+    const shown=d.pts===''?'0':d.pts;
+    return `<div class="dr ${i===sel?'sel':''}" onclick="selectRow(${i})">
+      <div style="min-width:0;flex:1">
+        <div class="dnm">${escapeHtml(p)}</div>
+        <div class="proj">→ ${b} + ${score}${bonus?' −50':''} = <b style="color:${bonus?'var(--gold)':'var(--ink)'}">${fut-(bonus?50:0)}</b></div>
+      </div>
+      <div class="chips">
+        <button class="chip y ${d.yaniv?'on':''}" onclick="event.stopPropagation();toggleChip(${i},'y')">🎖️</button>
+        <button class="chip a ${d.asaf?'on':''}" onclick="event.stopPropagation();toggleChip(${i},'a')">⚔️</button>
+      </div>
+      <div class="dval ${shown==='0'?'z':''}">${escapeHtml(shown)}</div>
+    </div>`;
+  }).join('');
+}
+function commitRound(){
+  const R=RULES(),base=draftBase();let round={},hadBonus=false;
+  state.players.forEach((p,i)=>{const d=draft[i];let pts=parseInt(d.pts||'0',10);if(isNaN(pts))pts=0;
+    const asaf=!!d.asaf,yan=!!d.yaniv;const score=asaf?pts+R.asaf:pts;
+    const fut=(base[p]||0)+score;const bonus=score>0&&isPalier(fut);
+    if(bonus)hadBonus=true;
+    round[p]={score,asaf,yaniv:yan,bonus};
+    if(yan)logEvent('yaniv',`🎖️ ${p} annonce Yaniv`);
+    if(asaf)logEvent('asaf',`⚔️ ${p} subit un Asaf (+${R.asaf})`);
+    if(bonus)logEvent('bonus',`⤵️ ${p} valide un palier (−50)`);});
+  const isEdit=editIndex!=null;
+  if(isEdit){state.history[editIndex]=round;}
+  else{if(!state.startedAt)state.startedAt=Date.now();state.history.push(round);}
+  recompute();
+  // ré-évaluer la fin dans les deux sens (utile en édition)
+  const over=state.players.some(p=>(state.scores[p]||0)>R.limit);let endedNow=false;
+  if(over&&!state.finished){state.finished=true;state.endedAt=Date.now();
+    const a=Object.entries(state.scores).sort((x,y)=>x[1]-y[1]);logEvent('bonus',`🏆 Partie terminée — ${a[0][0]} gagne`);endedNow=true;}
+  else if(!over&&state.finished){state.finished=false;state.endedAt=null;}
+  if(!isEdit&&!state.finished){advanceDealer();logEvent('bonus',`🃏 ${state.dealer} distribue la prochaine`);} // rotation ordre d'ajout
+  buzz(endedNow?[80,50,80,50,160]:(hadBonus?[20,40,20]:20));
+  editIndex=null;
+  save();render();closeRound();switchTab('rank');
+  if(endedNow){announceEnd();confetti();openReport();}
+  else if(!isEdit)announceRoundEnd();
+}
+function deleteEditedRound(){if(editIndex==null)return;const idx=editIndex;
+  uiConfirm(`Supprimer la manche ${idx+1} ?`).then(ok=>{if(!ok)return;
+    state.history.splice(idx,1);recompute();
+    if(!state.players.some(p=>(state.scores[p]||0)>RULES().limit)){state.finished=false;state.endedAt=null;}
+    editIndex=null;save();render();closeRound();switchTab('rank');});}
+function undoRound(){if(!state.history.length)return;state.history.pop();logEvent('asaf','↩️ Manche annulée');recompute();
+  if(!state.players.some(p=>(state.scores[p]||0)>RULES().limit)){state.finished=false;state.endedAt=null;}
+  save();render();}
+
+/* ---------- revanche ---------- */
+function rematch(){const players=state.players.slice();persist();
+  createGame('Revanche · '+fmtDate(Date.now()),true);
+  players.forEach(n=>{state.players.push(n);state.scores[n]=0;state.stats[n]={yaniv:0,asaf:0,bonus:0};});
+  pickDealer();save();render();goTable();
+  if(state.dealer)speak(`Revanche. ${state.dealer} distribue`);}
+
+/* ---------- démarrage ---------- */
+installMeta();
+loadLibrary();
+setSpeakBtn();
+populateVoiceSelect();
+timerInt=setInterval(updateTimer,1000);
+showView( (state.players.length>0 || state.history.length>0) ? 'table' : 'lobby' );
+if(curView==='table') switchTab('rank');
+</script>
+</body>
+</html>
