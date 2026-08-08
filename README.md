@@ -2,7 +2,7 @@
 
 Application web **mono-fichier** pour suivre le score d'une partie de **Yaniv** — sans compte, sans serveur, hors-ligne, sur n'importe quel téléphone ou navigateur.
 
-👉 **Jouer / ouvrir** : télécharger `index.html` et l'ouvrir dans un navigateur (le lien direct GitHub Pages sera ajouté ici une fois activé).
+👉 **Jouer maintenant : https://coretc.github.io/yaniv-club/** (ou télécharger `index.html` et l'ouvrir dans un navigateur).
 
 ## Fonctionnalités
 
