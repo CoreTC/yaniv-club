@@ -277,14 +277,14 @@ tr:last-child td{border-bottom:none}
       <h2>Règles</h2>
       <button class="btn-ghost full" onclick="openRules()">⚙️ Règles de la partie</button>
       <h2>Sauvegarde & partage</h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn-ghost" onclick="exportAll()">💾 Exporter</button>
-        <button class="btn-ghost" onclick="importFileTrigger()">📥 Importer</button>
-        <button class="btn-ghost" onclick="shareCode()">🔗 Copier le code</button>
-        <button class="btn-ghost" onclick="importCode()">📋 Coller un code</button>
+      <button class="btn-gold full" onclick="shareGame()">🔗 Partager cette partie</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <button class="btn-ghost" onclick="importCode()">📋 Coller un lien reçu</button>
+        <button class="btn-ghost" onclick="exportAll()">💾 Exporter (fichier)</button>
+        <button class="btn-ghost" onclick="importFileTrigger()">📥 Importer (fichier)</button>
       </div>
       <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importFile(event)">
-      <div class="muted" style="font-size:12px;margin-top:8px">« Exporter » sauvegarde toutes tes parties dans un fichier. « Code » = envoyer la partie en cours par message (copier/coller).</div>
+      <div class="muted" style="font-size:12px;margin-top:8px">« Partager » envoie la partie en cours par message : la personne ouvre le lien et la partie s'importe toute seule. « Exporter » sauvegarde <b>toutes</b> tes parties dans un fichier.</div>
       <h2>Options</h2>
       <button class="btn-red full" onclick="deleteCurrent()">🗑️ Supprimer cette partie</button>
     </div>
@@ -634,17 +634,29 @@ function mergeLibrary(data){let games=null;
   persist();render();uiAlert(n+' partie(s) importée(s).');}
 function b64enc(s){return btoa(unescape(encodeURIComponent(s)));}
 function b64dec(s){return decodeURIComponent(escape(atob(s)));}
-function shareCode(){const g=library.games[library.currentId];if(!g){uiAlert("Aucune partie en cours.");return;}
-  const code='YANIV1:'+b64enc(JSON.stringify({name:g.name,state:g.state}));
-  if(navigator.clipboard&&navigator.clipboard.writeText)
-    navigator.clipboard.writeText(code).then(()=>uiAlert("Code copié ! Colle-le dans un message pour envoyer la partie."),()=>uiPrompt('Copie ce code :',code));
-  else uiPrompt('Copie ce code :',code);}
-function importCode(){uiPrompt('Colle le code de partage reçu :','').then(code=>{if(!code)return;code=code.trim();
-  if(code.indexOf('YANIV1:')===0)code=code.slice(7);
-  try{const o=JSON.parse(b64dec(code));if(!o||!o.state)throw 0;const id=uid();
+function gameLink(g){const base=location.href.split('#')[0];return base+'#g='+b64enc(JSON.stringify({name:g.name,state:g.state}));}
+// Partager la partie en cours : menu natif (WhatsApp/SMS…) si dispo, sinon copie du lien
+function shareGame(){const g=library.games[library.currentId];if(!g){uiAlert("Aucune partie en cours.");return;}
+  const url=gameLink(g);
+  if(navigator.share){navigator.share({title:'Yaniv — '+g.name,text:`Rejoins la partie « ${g.name} »`,url}).catch(function(){});return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(
+      function(){uiAlert("Lien copié ✓\nColle-le dans un message (WhatsApp, SMS…). La personne ouvre le lien et la partie s'importe toute seule.");},
+      function(){uiPrompt('Copie ce lien :',url);});
+    return;}
+  uiPrompt('Copie ce lien :',url);}
+function extractCode(s){s=(s||'').trim();const h=s.indexOf('#g=');if(h>=0)return s.slice(h+3);if(s.indexOf('YANIV1:')===0)return s.slice(7);return s;}
+function importPayload(code){try{const o=JSON.parse(b64dec(extractCode(code)));if(!o||!o.state)throw 0;const id=uid();
     library.games[id]={id,name:o.name||'Partie reçue',createdAt:Date.now(),updatedAt:Date.now(),state:sanitizeState(o.state)};
-    persist();render();uiAlert('Partie « '+(o.name||'reçue')+' » importée !');
-  }catch(e){uiAlert("Code invalide.");}});}
+    persist();activate(id);goTable();uiAlert('Partie « '+(o.name||'reçue')+' » importée ✓');return true;
+  }catch(e){uiAlert("Lien ou code invalide.");return false;}}
+function importCode(){uiPrompt('Colle le lien (ou code) reçu :','').then(function(code){if(code)importPayload(code);});}
+// Au démarrage : si l'URL contient une partie partagée (#g=…), proposer de l'importer
+function checkSharedLink(){try{const h=location.hash||'';if(h.indexOf('#g=')!==0)return;const code=h.slice(3);
+    const o=JSON.parse(b64dec(code));if(!o||!o.state)return;
+    try{history.replaceState(null,'',location.pathname+location.search);}catch(e){location.hash='';}
+    uiConfirm(`Importer la partie « ${o.name||'reçue'} » reçue par lien ?`).then(function(ok){if(ok)importPayload('#g='+code);});
+  }catch(e){}}
 
 /* ---------- persistance ---------- */
 function persist(){const g=library.games[library.currentId];if(g){g.state=state;g.updatedAt=Date.now();}
@@ -930,6 +942,7 @@ populateVoiceSelect();
 timerInt=setInterval(updateTimer,1000);
 showView( (state.players.length>0 || state.history.length>0) ? 'table' : 'lobby' );
 if(curView==='table') switchTab('rank');
+checkSharedLink(); // importe une partie reçue par lien (#g=…)
 </script>
 </body>
 </html>
