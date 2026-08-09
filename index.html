@@ -415,14 +415,17 @@ function fmtDate(ts){if(!ts)return '—';const d=new Date(ts),p=n=>String(n).pad
 function fmtDur(ms){ms=Math.max(0,ms||0);const s=Math.floor(ms/1000),m=Math.floor(s/60);
   return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
 
-/* ---------- distributeur (mélangeur) ---------- */
-function pickDealer(){if(!state.players.length){state.dealer=null;return;}
-  if(state.players.length===1){state.dealer=state.players[0];return;}
-  let n;do{n=state.players[Math.floor(Math.random()*state.players.length)];}while(n===state.dealer); // évite de retomber sur le même
+/* ---------- distributeur (mélangeur) ----------
+   Ne distribue jamais un joueur éliminé (score > limite) tant qu'il reste des survivants. */
+function dealerPool(){const lim=RULES().limit;const pool=state.players.filter(p=>(state.scores[p]||0)<=lim);return pool.length?pool:state.players.slice();}
+function pickDealer(){const list=dealerPool();
+  if(!list.length){state.dealer=null;return;}
+  if(list.length===1){state.dealer=list[0];return;}
+  let n;do{n=list[Math.floor(Math.random()*list.length)];}while(n===state.dealer); // évite de retomber sur le même
   state.dealer=n;}
-function ensureDealer(){if(!state.dealer||!state.players.includes(state.dealer))pickDealer();}
-function advanceDealer(){if(!state.players.length){state.dealer=null;return;}
-  let i=state.players.indexOf(state.dealer);i=(i+1)%state.players.length;state.dealer=state.players[i];}
+function ensureDealer(){if(!state.dealer||!state.players.includes(state.dealer)||(state.scores[state.dealer]||0)>RULES().limit)pickDealer();}
+function advanceDealer(){const list=dealerPool();if(!list.length){state.dealer=null;return;}
+  let i=list.indexOf(state.dealer);i=(i+1)%list.length;state.dealer=list[i];}
 function rerollDealer(){if(!state.players.length||state.finished)return;
   pickDealer();logEvent('bonus',`🃏 ${state.dealer} distribue`);speak(`${state.dealer} distribue`);save();render();}
 
@@ -492,9 +495,14 @@ function announceRoundEnd(){const arr=Object.entries(state.scores).sort((a,b)=>a
   if(state.dealer)txt+=` ${state.dealer}, à toi de distribuer.`;
   speak(txt);}
 
-/* ---------- fin de partie ---------- */
+/* ---------- fin de partie ----------
+   Élimination progressive : dépasser la limite ÉLIMINE le joueur, mais la partie continue.
+   Elle ne s'achève que lorsqu'il ne reste plus qu'UN seul survivant (les autres éliminés). */
+function survivors(){const lim=RULES().limit;return state.players.filter(p=>(state.scores[p]||0)<=lim);}
+function isGameOver(){if(state.players.length<2)return false;
+  return state.players.some(p=>(state.scores[p]||0)>RULES().limit) && survivors().length<=1;}
 function checkEnd(){if(state.finished)return false;
-  if(state.players.some(p=>(state.scores[p]||0)>RULES().limit)){
+  if(isGameOver()){
     state.finished=true;state.endedAt=Date.now();
     const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
     logEvent('bonus',`🏆 Partie terminée — ${arr[0][0]} gagne`);
@@ -538,15 +546,43 @@ function buildSeries(){const series={};state.players.forEach(p=>series[p]=[0]);
   state.history.forEach(round=>{state.players.forEach(p=>{const c=round[p];
     if(c){run[p]+=c.score;if(c.bonus)run[p]-=50;}series[p].push(run[p]);});});
   return series;}
+/* ---------- détail Yaniv / Asaf / Palier par manche ---------- */
+function roundDetailsHTML(){
+  if(!state.history.length)return '';
+  const rows=state.history.map((round,i)=>{
+    const parts=state.players.map(p=>{
+      const c=round[p];if(!c)return null;
+      const tags=[];
+      if(c.yaniv)tags.push('🎖️ Yaniv');
+      if(c.asaf)tags.push('⚔️ Asaf (+'+RULES().asaf+')');
+      if(c.bonus)tags.push('⤵️ Palier (−50)');
+      if(!tags.length)return null;
+      return `<b style="color:var(--ink)">${escapeHtml(p)}</b> ${tags.join(' · ')}`;
+    }).filter(Boolean);
+    if(!parts.length)return '';
+    return `<div class="ev" style="border-left-color:var(--gold)"><span style="color:var(--gold)">Manche ${i+1}</span> — ${parts.join(' · ')}</div>`;
+  }).filter(Boolean).join('');
+  return rows? `<h2 style="margin-top:20px">🎖️⚔️⤵️ Détail par manche</h2>${rows}` : '';
+}
 function chartSVG(){
   const series=buildSeries(),names=state.players,rounds=state.history.length;
-  const W=560,H=260,PL=40,PR=16,PT=16,PB=28;
-  let maxV=200;names.forEach(p=>series[p].forEach(v=>{if(v>maxV)maxV=v;}));maxV+=20;
+  const lim=RULES().limit;
+  const W=560,H=260,PL=40,PR=16,PT=16,PB=36;
+  let maxV=lim;names.forEach(p=>series[p].forEach(v=>{if(v>maxV)maxV=v;}));maxV+=20;
   const nx=Math.max(1,rounds);
   const X=i=>PL+(i*(W-PL-PR)/nx),Y=v=>PT+(H-PT-PB)*(1-(v/maxV));
   let g='';
-  [50,100,150].forEach(t=>{if(t<maxV)g+=`<line x1="${PL}" y1="${Y(t).toFixed(1)}" x2="${W-PR}" y2="${Y(t).toFixed(1)}" stroke="rgba(233,200,134,.12)"/><text x="${PL-6}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end" fill="#9b998b" font-size="10" font-family="monospace">${t}</text>`;});
-  g+=`<line x1="${PL}" y1="${Y(200).toFixed(1)}" x2="${W-PR}" y2="${Y(200).toFixed(1)}" stroke="rgba(228,106,106,.6)" stroke-dasharray="5 4"/><text x="${W-PR}" y="${(Y(200)-5).toFixed(1)}" text-anchor="end" fill="#e46a6a" font-size="10" font-family="monospace">200 · défaite</text>`;
+  [50,100,150].forEach(t=>{if(t<maxV&&t<lim)g+=`<line x1="${PL}" y1="${Y(t).toFixed(1)}" x2="${W-PR}" y2="${Y(t).toFixed(1)}" stroke="rgba(233,200,134,.12)"/><text x="${PL-6}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end" fill="#9b998b" font-size="10" font-family="monospace">${t}</text>`;});
+  g+=`<line x1="${PL}" y1="${Y(lim).toFixed(1)}" x2="${W-PR}" y2="${Y(lim).toFixed(1)}" stroke="rgba(228,106,106,.6)" stroke-dasharray="5 4"/><text x="${W-PR}" y="${(Y(lim)-5).toFixed(1)}" text-anchor="end" fill="#e46a6a" font-size="10" font-family="monospace">${lim} · défaite</text>`;
+  // graduation en abscisse : numéro de manche (on limite le nombre d'étiquettes si beaucoup de manches)
+  if(rounds>0){
+    const step=Math.max(1,Math.ceil(rounds/14));
+    for(let i=step;i<=rounds;i+=step){
+      g+=`<text x="${X(i).toFixed(1)}" y="${H-20}" text-anchor="middle" fill="#9b998b" font-size="10" font-family="monospace">${i}</text>`;
+    }
+    if(rounds%step!==0){g+=`<text x="${X(rounds).toFixed(1)}" y="${H-20}" text-anchor="middle" fill="#9b998b" font-size="10" font-family="monospace">${rounds}</text>`;}
+    g+=`<text x="${(PL+(W-PL-PR)/2).toFixed(1)}" y="${H-6}" text-anchor="middle" fill="#9b998b" font-size="9" font-family="monospace" letter-spacing="1">MANCHES</text>`;
+  }
   names.forEach((p,idx)=>{const col=CHART_COLORS[idx%CHART_COLORS.length];
     const pts=series[p].map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
     g+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
@@ -570,6 +606,7 @@ function renderReport(){
   if(state.history.length&&state.players.length){
     html+=chartSVG();
     html+=`<div class="legend">${state.players.map((p,idx)=>`<span><i style="background:${CHART_COLORS[idx%CHART_COLORS.length]}"></i>${escapeHtml(p)}</span>`).join('')}</div>`;
+    html+=roundDetailsHTML();
   }else{html+='<div class="empty">Pas encore de manche à afficher.</div>';}
   if(arr.length){html+='<h2 style="margin-top:20px">Classement final</h2>';
     html+=arr.map((x,i)=>`<div class="lb-row" style="margin-bottom:8px"><div class="rk">${['🥇','🥈','🥉'][i]||('#'+(i+1))}</div><div class="col"><div class="nm2">${escapeHtml(x[0])}</div></div><div class="sc" style="font-size:20px">${x[1]}<small>pts</small></div></div>`).join('');}
@@ -612,7 +649,7 @@ function saveRules(){let lim=parseInt(document.getElementById('rLimit').value,10
   let as=parseInt(document.getElementById('rAsaf').value,10);if(isNaN(as)||as<0)as=30;
   state.rules={limit:lim,asaf:as,paliers:document.getElementById('rPal').checked,yanivZero:document.getElementById('rYz').checked};
   recompute();
-  const over=state.players.some(p=>(state.scores[p]||0)>lim);
+  const over=isGameOver();
   state.finished=over;if(!over)state.endedAt=null;else if(!state.endedAt)state.endedAt=Date.now();
   save();render();closeRules();}
 
@@ -675,9 +712,10 @@ function loadLibrary(){
   if(!library.currentId||!library.games[library.currentId]){
     const ids=Object.keys(library.games);
     if(ids.length){ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));library.currentId=ids[0];}
-    else createGame(defaultName(),false);
+    else{library.currentId=null;state=blankState();} // aucune partie vide créée/persistée d'office → lobby propre
   }
-  activate(library.currentId);persist();
+  if(library.currentId)activate(library.currentId);
+  persist();
 }
 
 /* ---------- navigation ---------- */
@@ -707,7 +745,7 @@ function deleteGame(id){const g=library.games[id];if(!g)return Promise.resolve(f
     if(!ok)return false;delete library.games[id];
     if(library.currentId===id){const ids=Object.keys(library.games);
       if(ids.length){ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));activate(ids[0]);}
-      else createGame(defaultName(),false);}
+      else{library.currentId=null;state=blankState();}}
     persist();render();return true;});}
 function deleteCurrent(){deleteGame(library.currentId).then(done=>{if(done&&curView==='table')showView('lobby');});}
 function renameGame(id){const g=library.games[id];if(!g)return;
@@ -723,10 +761,13 @@ function addPlayer(){const input=document.getElementById('playerName');let n=inp
   state.players.push(n);state.scores[n]=0;state.stats[n]={yaniv:0,asaf:0,bonus:0};
   input.value='';input.focus();save();render();}
 function removePlayer(name){if(!state.players.includes(name))return;
-  if(state.players.length<=1){uiAlert("Impossible de supprimer le dernier joueur.");return;}
-  uiConfirm(`Retirer "${name}" de la partie ?`).then(ok=>{if(!ok)return;
+  const last=state.players.length<=1;
+  const msg=last?`Retirer "${name}" ? C'est le dernier joueur : la partie sera vidée.`:`Retirer "${name}" de la partie ?`;
+  uiConfirm(msg).then(ok=>{if(!ok)return;
     state.players=state.players.filter(p=>p!==name);delete state.scores[name];delete state.stats[name];
-    state.history.forEach(r=>{delete r[name];});recompute();logEvent('asaf',`🗑️ ${name} retiré de la partie`);save();render();});}
+    state.history.forEach(r=>{delete r[name];});recompute();logEvent('asaf',`🗑️ ${name} retiré de la partie`);
+    if(!state.players.length){state.dealer=null;state.finished=false;state.startedAt=null;state.endedAt=null;state.history=[];}
+    save();render();});}
 
 /* ---------- rendu ---------- */
 function render(){
@@ -834,7 +875,7 @@ function recompute(){
 }
 
 /* ---------- feuille de manche (keypad) ---------- */
-let draft=[], sel=0, editIndex=null;
+let draft=[], sel=0, editIndex=null, draftPlayers=[];
 // cumul AVANT une manche donnée (pour projeter correctement en édition)
 function scoresBefore(idx){const sc={};state.players.forEach(p=>sc[p]=0);
   for(let k=0;k<idx&&k<state.history.length;k++){const r=state.history[k];
@@ -848,14 +889,16 @@ function openRound(idx){
   ensureDealer();
   const R=RULES();
   if(editIndex!=null){
+    draftPlayers=state.players.slice(); // édition : tous les joueurs de la manche corrigée
     const r=state.history[editIndex]||{};
-    draft=state.players.map(p=>{const c=r[p];if(!c)return{pts:'',yaniv:false,asaf:false};
+    draft=draftPlayers.map(p=>{const c=r[p];if(!c)return{pts:'',yaniv:false,asaf:false};
       let raw=(c.score||0)-(c.asaf?R.asaf:0);if(raw<0)raw=0;
       return{pts:String(raw),yaniv:!!c.yaniv,asaf:!!c.asaf};});
     document.getElementById('roundTitle').textContent='Modifier la manche '+(editIndex+1);
     document.getElementById('delRoundBtn').style.display='';
   }else{
-    draft=state.players.map(()=>({pts:'',yaniv:false,asaf:false}));
+    draftPlayers=survivors();if(!draftPlayers.length)draftPlayers=state.players.slice(); // nouvelle manche : seuls les survivants jouent
+    draft=draftPlayers.map(()=>({pts:'',yaniv:false,asaf:false}));
     document.getElementById('roundTitle').textContent='Manche '+(state.history.length+1);
     document.getElementById('delRoundBtn').style.display='none';
   }
@@ -875,7 +918,7 @@ function toggleChip(i,kind){const d=draft[i];if(!d)return;
   sel=i;renderDraft();}
 function renderDraft(){
   const R=RULES(),base=draftBase();
-  document.getElementById('draftRows').innerHTML=state.players.map((p,i)=>{
+  document.getElementById('draftRows').innerHTML=draftPlayers.map((p,i)=>{
     const d=draft[i];const raw=parseInt(d.pts||'0',10)||0;const score=d.asaf?raw+R.asaf:raw;
     const b=base[p]||0;const fut=b+score;const bonus=score>0&&isPalier(fut);
     const shown=d.pts===''?'0':d.pts;
@@ -894,7 +937,7 @@ function renderDraft(){
 }
 function commitRound(){
   const R=RULES(),base=draftBase();let round={},hadBonus=false;
-  state.players.forEach((p,i)=>{const d=draft[i];let pts=parseInt(d.pts||'0',10);if(isNaN(pts))pts=0;
+  draftPlayers.forEach((p,i)=>{const d=draft[i];let pts=parseInt(d.pts||'0',10);if(isNaN(pts))pts=0;
     const asaf=!!d.asaf,yan=!!d.yaniv;const score=asaf?pts+R.asaf:pts;
     const fut=(base[p]||0)+score;const bonus=score>0&&isPalier(fut);
     if(bonus)hadBonus=true;
@@ -906,12 +949,12 @@ function commitRound(){
   if(isEdit){state.history[editIndex]=round;}
   else{if(!state.startedAt)state.startedAt=Date.now();state.history.push(round);}
   recompute();
-  // ré-évaluer la fin dans les deux sens (utile en édition)
-  const over=state.players.some(p=>(state.scores[p]||0)>R.limit);let endedNow=false;
+  // ré-évaluer la fin dans les deux sens (utile en édition) : fin quand il ne reste qu'un survivant
+  const over=isGameOver();let endedNow=false;
   if(over&&!state.finished){state.finished=true;state.endedAt=Date.now();
     const a=Object.entries(state.scores).sort((x,y)=>x[1]-y[1]);logEvent('bonus',`🏆 Partie terminée — ${a[0][0]} gagne`);endedNow=true;}
   else if(!over&&state.finished){state.finished=false;state.endedAt=null;}
-  if(!isEdit&&!state.finished){advanceDealer();logEvent('bonus',`🃏 ${state.dealer} distribue la prochaine`);} // rotation ordre d'ajout
+  if(!isEdit&&!state.finished){pickDealer();logEvent('bonus',`🃏 ${state.dealer} distribue la prochaine`);} // tirage aléatoire à chaque manche (parmi les survivants)
   buzz(endedNow?[80,50,80,50,160]:(hadBonus?[20,40,20]:20));
   editIndex=null;
   save();render();closeRound();switchTab('rank');
@@ -921,10 +964,10 @@ function commitRound(){
 function deleteEditedRound(){if(editIndex==null)return;const idx=editIndex;
   uiConfirm(`Supprimer la manche ${idx+1} ?`).then(ok=>{if(!ok)return;
     state.history.splice(idx,1);recompute();
-    if(!state.players.some(p=>(state.scores[p]||0)>RULES().limit)){state.finished=false;state.endedAt=null;}
+    if(!isGameOver()){state.finished=false;state.endedAt=null;}
     editIndex=null;save();render();closeRound();switchTab('rank');});}
 function undoRound(){if(!state.history.length)return;state.history.pop();logEvent('asaf','↩️ Manche annulée');recompute();
-  if(!state.players.some(p=>(state.scores[p]||0)>RULES().limit)){state.finished=false;state.endedAt=null;}
+  if(!isGameOver()){state.finished=false;state.endedAt=null;}
   save();render();}
 
 /* ---------- revanche ---------- */
