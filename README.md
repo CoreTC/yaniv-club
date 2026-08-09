@@ -21,7 +21,7 @@ Application web **mono-fichier** pour suivre le score d'une partie de **Yaniv** 
 - 📈 **Rapport** graphique (trajectoire des scores, manches en abscisse) + 🎖️⚔️⤵️ **détail par manche** + 🏁 bilan de fin de partie.
 - 🏆 **Palmarès du groupe** (victoires / défaites / moyenne, toutes parties confondues).
 - ⚙️ **Règles configurables** (limite, valeur de l'Asaf, paliers, « Yaniv = 0 »).
-- 💾 **Sauvegarde renforcée** (sans compte, hors-ligne) : sauvegarde auto locale + miroir de secours + rappel de sauvegarde fichier ; export/import `.json` pour tout restaurer.
+- 💾 **Sauvegarde renforcée** (sans compte, hors-ligne) : sauvegarde auto locale + miroir de secours. Sauvegarde/restauration de **toutes** tes parties par **presse-papier** (copier / coller — idéal PC) ou par **fichier `.json`**.
 - 📲 **Transfert entre appareils par QR ou lien** : la partie en cours s'encode en QR (payload compact) — l'autre téléphone la scanne et l'importe toute seule ; repli sur le lien si la partie est trop grande.
 - 🎉 Confettis, retour haptique, installable sur l'écran d'accueil.
 

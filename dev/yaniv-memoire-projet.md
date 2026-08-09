@@ -2,7 +2,13 @@
 
 *Dernière mise à jour : 9 août 2026 — version courante : **`index.html` (v10, publié = Yaniv Club)** ; archives dev = `dev/Yaniv v9.html` (merge Damien), `dev/Yaniv v10.html` (sauvegarde+QR).*
 
-## ⭐ v10 (09/08) — sauvegarde renforcée hors-ligne + transfert par QR (choix « sans compte »)
+## ⭐ v11 (09/08) — sauvegarde/restauration par lien+presse-papier, fix import
+- 🐛 **BUG trouvé** : le champ `#uiInput` (utilisé par `uiPrompt`, donc par « Coller un lien reçu ») avait `maxlength="40"` → tout lien/code collé était **tronqué à 40 caractères** → « lien invalide ». C'était la cause de l'import cassé. `maxlength` retiré. (Le QR marchait car il passe par l'URL `#g=`, pas par ce champ.)
+- 📋 **Sauvegarde/restauration par presse-papier** (fiable sur PC, sans fichier) : `copyBackup()` → `YANIVBAK:<base64(library)>` dans le presse-papier ; `pasteRestore()` gère `YANIVBAK:` (bibliothèque entière via `mergeLibrary`) OU un lien de partie (`importPayload`). Boutons « 📋 Copier ma sauvegarde » / « 📥 Restaurer (coller) ».
+- 💾 **Export fichier robuste** : `download()` retourne un booléen + repli `data:` si `createObjectURL` échoue ; `exportAll()` en try/catch affiche un message clair (« utilise Copier ma sauvegarde ») au lieu de « rien ne se passe » (symptôme signalé sur PC). Fichier démoté en secondaire.
+- ⚠️ Thomas préfère les **liens/presse-papier aux fichiers**. La synchro auto multi-appareils (Firebase) reste écartée (choix « sans compte »). Archive `dev/Yaniv v11.html`.
+
+## v10 (09/08) — sauvegarde renforcée hors-ligne + transfert par QR (choix « sans compte »)
 Thomas a signalé que le site publié « n'enregistre pas les parties » (localStorage = par navigateur/appareil, effacé en privé / purge iOS). Choix retenu : **rester 100 % autonome, sans backend/compte**, et renforcer :
 - **Anti-perte local** : miroir de secours `yaniv_v5_bak` écrit à chaque `persist()` ; `loadLibrary` retombe dessus via `parseLib()` si la clé principale est corrompue. Rappel « dernière sauvegarde fichier » (`yaniv_last_export`, `updateBackupInfo()`), bouton **💾 Sauvegarder sur l'appareil** (export `.json` = la vraie copie qui survit à une purge). Note iOS (ajouter à l'écran d'accueil + exporter).
 - **Transfert par QR** : lib **qrcode-generator (Arase, MIT) minifiée ~21 Ko inlinée** dans un `<script>` dédié avant le principal. `qrSVG()` rend un QR SVG noir/blanc (marge 4), **cappé à ≤105 modules** (scannable) sinon repli lien. Modale `#shareModal` : QR + « Envoyer » (navigator.share) + « Copier le lien ».
