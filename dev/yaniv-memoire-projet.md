@@ -1,6 +1,20 @@
 # Mémoire de projet — Yaniv (suivi de score)
 
-*Dernière mise à jour : 8 août 2026 — version courante : **`Yaniv v8.html`** (Yaniv reprend le projet)*
+*Dernière mise à jour : 9 août 2026 — version courante : **`index.html` (v9, publié = Yaniv Club)** ; archive dev = `dev/Yaniv v9.html`.*
+
+> **Organisation des dossiers (09/08) — un seul dossier `yaniv-club`.** Le produit publié est `index.html` (GitHub Pages `coretc.github.io/yaniv-club/` + Gitea). Tout l'historique de dev (v4→v8, le v7.1 de Damien, cette mémoire, l'archive v9) vit dans `dev/`, versionné sur Gitea **et** GitHub mais sans affecter le site (Pages ne sert que `index.html` à la racine). L'ancien dépôt Gitea `Yaniv` reste comme sauvegarde dormante.
+
+## ⭐ v9 (09/08) — reprise des améliorations de Damien (`Yanov_v7_1.html`) dans le Club
+Damien avait branché sur `Yaniv v7.html` ; ses apports ont été **portés et adaptés** aux abstractions v8 (`RULES().limit`, `isPalier()`, mode édition `editIndex`) — pas collés bruts. Vérifié par simulation Node (22 assertions) + parcours DOM complet du vrai script.
+- **☠️ Élimination progressive (le gros changement de règle)** : dépasser la limite **élimine** le joueur mais la partie **continue** ; elle ne finit que lorsqu'il ne reste qu'**un survivant**. Helpers `survivors()` + `isGameOver()` (= un joueur a dépassé ET survivants ≤ 1), centralisés dans `checkEnd`/`commitRound`/`saveRules`/`deleteEditedRound`/`undoRound` (fini le `some(>limit)` éparpillé).
+- **Survivants uniquement** : `draftPlayers` (nouvelle var) = survivants pour une nouvelle manche (tous en édition) ; `renderDraft`/`commitRound` itèrent `draftPlayers`. Les éliminés ne saisissent plus et sont exclus de la distribution (`dealerPool()` filtre par limite, `pickDealer`/`advanceDealer`/`ensureDealer` adaptés).
+- **🃏 Distributeur = ROTATION** (décision confirmée 09/08, on NE prend PAS le random-chaque-manche de Damien) : aléatoire au départ, puis `advanceDealer()` tourne dans l'ordre parmi les survivants.
+- **🎖️⚔️⤵️ `roundDetailsHTML()`** : bloc « Détail par manche » (Yaniv/Asaf/Palier) ajouté au bilan.
+- **Graphe** : graduation des manches en abscisse + label « MANCHES », marge basse 36, lignes de palier/défaite bornées à `RULES().limit` (au lieu de 200 en dur).
+- **UX** : `loadLibrary`/`deleteGame` ne créent plus de partie vide d'office (lobby propre) ; `removePlayer` autorise le retrait du **dernier** joueur (vide la partie).
+- `nextPalier` allait déjà jusqu'à la limite en v8 → rien à porter.
+
+
 
 ## ⭐ v7 « Club » — refonte complète (ne reprend pas la base v4/v5/v6)
 
