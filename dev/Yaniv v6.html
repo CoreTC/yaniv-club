@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>YANIV · Arcade</title>
+<style>
+:root{
+  --bg:#08080f; --bg2:#0f0f1c;
+  --panel:rgba(22,22,38,.72); --panel-solid:#161626;
+  --border:rgba(124,92,255,.28);
+  --text:#eaeaf6; --muted:#8b8bb0;
+  --cyan:#00e5ff; --mag:#ff2bd6; --purple:#8b5cff; --green:#2fffa3; --red:#ff466b; --gold:#ffd447;
+  --mono:ui-monospace,'SF Mono','Cascadia Mono',Consolas,'Roboto Mono',monospace;
+  --sans:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,'Noto Sans',sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--sans);color:var(--text);margin:0;padding:16px;min-height:100vh;
+  background:
+    radial-gradient(900px 500px at 80% -10%,rgba(139,92,255,.25),transparent 60%),
+    radial-gradient(700px 500px at -10% 20%,rgba(0,229,255,.18),transparent 55%),
+    radial-gradient(700px 600px at 50% 120%,rgba(255,43,214,.15),transparent 60%),
+    var(--bg);
+  transition:background .3s,color .3s;
+}
+body::before{ /* grille façon HUD */
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:linear-gradient(rgba(139,92,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,255,.06) 1px,transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(circle at 50% 30%,#000,transparent 85%);
+  mask-image:radial-gradient(circle at 50% 30%,#000,transparent 85%);
+}
+.app{position:relative;z-index:1;max-width:760px;margin:auto;
+  background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--border);border-radius:22px;padding:22px;
+  box-shadow:0 0 0 1px rgba(0,229,255,.05),0 24px 60px rgba(0,0,0,.55);
+}
+h2{margin:26px 0 10px;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+/* ---- Titre ---- */
+.hero{text-align:center;margin:2px 0 6px}
+.suits{font-size:16px;letter-spacing:8px;margin-bottom:6px}
+.suits .s1{color:var(--cyan)} .suits .s2{color:var(--red)} .suits .s3{color:var(--gold)} .suits .s4{color:var(--green)}
+.logo{font-family:var(--mono);font-weight:800;font-size:clamp(38px,11vw,68px);line-height:1;letter-spacing:.08em;
+  background:linear-gradient(90deg,var(--cyan),var(--purple),var(--mag),var(--cyan));
+  background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:flow 6s linear infinite;
+  filter:drop-shadow(0 0 18px rgba(139,92,255,.45));
+}
+.tag{color:var(--muted);font-size:11px;letter-spacing:.35em;text-transform:uppercase;margin-top:2px}
+@keyframes flow{to{background-position:300% 0}}
+
+/* ---- Barre de match ---- */
+.topbar{display:flex;align-items:center;gap:10px;margin:16px 0 6px;flex-wrap:wrap}
+.match{flex:1;min-width:0;display:flex;align-items:center;gap:10px;cursor:pointer;
+  background:linear-gradient(180deg,rgba(0,229,255,.10),rgba(139,92,255,.10));
+  border:1px solid var(--border);border-radius:14px;padding:11px 14px;overflow:hidden}
+.match .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);flex:none;animation:pulse 1.8s infinite}
+.match .label{font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted)}
+.match .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes pulse{50%{opacity:.35}}
+
+/* ---- Boutons ---- */
+button{font-family:var(--sans);border:none;border-radius:12px;padding:12px 16px;font-size:14px;font-weight:700;
+  letter-spacing:.03em;color:#fff;cursor:pointer;-webkit-appearance:none;appearance:none;line-height:1.1;
+  transition:transform .08s ease,box-shadow .2s,filter .2s;
+  background:linear-gradient(180deg,var(--purple),#6a3ff0);box-shadow:0 6px 18px rgba(124,63,240,.35)}
+button:hover{filter:brightness(1.08)} button:active{transform:translateY(1px) scale(.99)}
+.btn-cyan{background:linear-gradient(180deg,var(--cyan),#00a6cc);color:#012;box-shadow:0 6px 18px rgba(0,229,255,.35)}
+.btn-green{background:linear-gradient(180deg,var(--green),#12c47c);color:#012;box-shadow:0 6px 18px rgba(47,255,163,.3)}
+.btn-orange{background:linear-gradient(180deg,#ffb020,#ff8a00);color:#201400;box-shadow:0 6px 18px rgba(255,138,0,.3)}
+.btn-red{background:linear-gradient(180deg,var(--red),#e01e4a);box-shadow:0 6px 18px rgba(255,70,107,.3)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid var(--border);box-shadow:none;color:var(--text)}
+.icon{padding:12px 14px}
+
+input{font-family:var(--sans);font-size:16px;color:var(--text);background:rgba(10,10,20,.6);
+  border:1px solid var(--border);border-radius:12px;padding:12px 14px;outline:none;transition:.2s}
+input::placeholder{color:var(--muted)}
+input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,229,255,.18)}
+
+.row{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.row input{flex:1;min-width:130px}
+.card{background:rgba(10,10,20,.4);border:1px solid var(--border);border-radius:16px;padding:14px;margin:10px 0}
+.empty{color:var(--muted);text-align:center;padding:14px;font-size:14px}
+
+/* ---- Joueurs (pills) ---- */
+.pill-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.pill-row{display:inline-flex;align-items:center;gap:8px;background:rgba(139,92,255,.12);
+  border:1px solid var(--border);border-radius:999px;padding:6px 6px 6px 14px}
+.pill-name{font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.del{background:rgba(255,70,107,.15);color:var(--red);border:1px solid rgba(255,70,107,.4);
+  width:26px;height:26px;padding:0;border-radius:50%;font-size:13px;box-shadow:none}
+
+/* ---- Leaderboard ---- */
+.leaderboard{display:flex;flex-direction:column;gap:8px}
+.lb-row{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);transition:.2s}
+.lb-rank{font-size:20px;width:34px;text-align:center;flex:none;font-family:var(--mono);color:var(--muted)}
+.lb-name{flex:1;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-score{font-family:var(--mono);font-weight:800;font-size:22px}
+.lb-unit{font-size:11px;color:var(--muted);margin-left:4px;font-weight:600}
+.lb-row.leader{border-color:var(--gold);background:linear-gradient(90deg,rgba(255,212,71,.14),rgba(255,212,71,.02));
+  box-shadow:0 0 22px rgba(255,212,71,.22);animation:goldpulse 2.4s ease-in-out infinite}
+.lb-row.leader .lb-score{color:var(--gold)}
+.lb-row.loser{border-color:rgba(255,70,107,.4)}
+.lb-row.loser .lb-score{color:var(--red)}
+@keyframes goldpulse{50%{box-shadow:0 0 34px rgba(255,212,71,.4)}}
+
+/* ---- Saisie manche ---- */
+.pcard{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);border-left:3px solid var(--purple);
+  border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.pcard-name{font-weight:700;flex:1;min-width:90px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pts{width:74px;text-align:center;font-family:var(--mono);font-size:18px;font-weight:700;padding:10px}
+.qz{background:linear-gradient(180deg,#ffb020,#ff8a00);color:#201400;padding:10px 12px;font-size:13px;box-shadow:none}
+.tog{display:inline-flex;align-items:center;gap:6px;padding:9px 13px;border-radius:999px;cursor:pointer;
+  font-weight:700;font-size:13px;user-select:none;transition:.15s;border:1px solid var(--border);
+  background:rgba(255,255,255,.03)}
+.tog input{accent-color:currentColor;width:15px;height:15px}
+.tog.y{color:var(--green)} .tog.a{color:var(--red)}
+.tog.y:has(input:checked){background:rgba(47,255,163,.14);border-color:var(--green);box-shadow:0 0 14px rgba(47,255,163,.35)}
+.tog.a:has(input:checked){background:rgba(255,70,107,.14);border-color:var(--red);box-shadow:0 0 14px rgba(255,70,107,.35)}
+
+/* ---- Stats ---- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stat-tile{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:12px}
+.stat-name{font-weight:700;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-line{display:flex;gap:12px;font-family:var(--mono);font-size:14px;color:var(--muted)}
+
+/* ---- Events ---- */
+.ev{padding:11px 14px;border-radius:12px;margin:6px 0;font-size:14px;font-weight:600;
+  border-left:3px solid var(--muted);background:rgba(255,255,255,.03)}
+.ev.yaniv{border-left-color:var(--cyan);color:var(--cyan)}
+.ev.asaf{border-left-color:var(--red);color:var(--red)}
+.ev.bonus{border-left-color:var(--green);color:var(--green)}
+
+/* ---- Historique ---- */
+.tablewrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px}
+table{width:100%;border-collapse:collapse;min-width:320px}
+th,td{padding:11px 12px;text-align:left;font-family:var(--mono);font-size:14px;border-bottom:1px solid rgba(139,92,255,.14)}
+th{background:rgba(139,92,255,.10);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-size:11px}
+tr:last-child td{border-bottom:none}
+
+/* ---- Modale bibliothèque ---- */
+.overlay{position:fixed;inset:0;z-index:100;display:none;align-items:flex-start;justify-content:center;
+  padding:16px;overflow:auto;background:rgba(5,5,12,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.overlay.open{display:flex}
+.modal{background:var(--panel-solid);border:1px solid var(--border);border-radius:20px;padding:20px;
+  max-width:640px;width:100%;margin:auto;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.modal h2{margin-top:0}
+.game-item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:13px;border:1px solid var(--border);border-radius:14px;margin:9px 0;background:rgba(255,255,255,.02)}
+.game-item.current{border-color:var(--green);background:rgba(47,255,163,.06);box-shadow:0 0 18px rgba(47,255,163,.15)}
+.game-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.game-actions{display:flex;gap:6px;flex-wrap:wrap}
+.game-actions button{padding:9px 11px;font-size:13px}
+
+/* ---- Thème clair ---- */
+body.light{--bg:#eef0f8;--text:#12122a;--muted:#5b5b78;--panel:rgba(255,255,255,.82);--panel-solid:#fff;--border:rgba(124,92,255,.22)}
+body.light{background:radial-gradient(900px 500px at 80% -10%,rgba(139,92,255,.18),transparent 60%),radial-gradient(700px 500px at -10% 20%,rgba(0,229,255,.14),transparent 55%),var(--bg)}
+body.light input,body.light .card,body.light .lb-row,body.light .pcard,body.light .stat-tile,body.light .ev,body.light .tog{background:rgba(255,255,255,.7)}
+
+@media(max-width:480px){
+  body{padding:10px}
+  .app{padding:16px;border-radius:18px}
+  .lb-score{font-size:19px}
+}
+</style>
+</head>
+<body class="dark">
+<div class='app'>
+
+  <div class="hero">
+    <div class="suits"><span class="s1">♠</span><span class="s2">♥</span><span class="s3">♦</span><span class="s4">♣</span></div>
+    <div class="logo">YANIV</div>
+    <div class="tag">Score Arena</div>
+  </div>
+
+  <div class="topbar">
+    <div class="match" id="matchChip" onclick="renameCurrent()" title="Renommer la partie">
+      <span class="dot"></span>
+      <div style="min-width:0">
+        <div class="label">Partie en cours</div>
+        <div class="name" id="gameTitle">—</div>
+      </div>
+    </div>
+    <button class="btn-cyan" onclick="openGamesModal()">📂 Parties</button>
+    <button class="btn-ghost icon" onclick="toggleTheme()">🌓</button>
+  </div>
+
+  <h2>Joueurs</h2>
+  <div class='row'>
+    <input id='playerName' placeholder='Nom du joueur' maxlength='24' autocomplete="off">
+    <button class="btn-green" onclick='addPlayer()'>+ Ajouter</button>
+  </div>
+  <div id='players' class='card'></div>
+
+  <h2>🏆 Classement</h2>
+  <div id='ranking' class='leaderboard'></div>
+
+  <h2>🎯 Saisie manche</h2>
+  <div id='roundInputs'></div>
+  <div class='row'>
+    <button class="btn-green" onclick='saveRound()' style="flex:1">✔ Valider la manche</button>
+    <button class="btn-orange" onclick='undoRound()'>↩️ Annuler</button>
+  </div>
+  <div class='row' style="margin-top:4px">
+    <button onclick='newGame()' style="flex:1">➕ Nouvelle partie</button>
+    <button class="btn-ghost" onclick='openGamesModal()'>📂 Enregistrées</button>
+    <button class="btn-ghost" onclick='exportCSV()'>📤 CSV</button>
+  </div>
+
+  <h2>📊 Statistiques</h2>
+  <div id='stats' class='stat-grid'></div>
+
+  <h2>📡 Événements</h2>
+  <div id='events'></div>
+
+  <h2>📖 Historique</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr id="historyHeader"><th>Manche</th></tr></thead>
+      <tbody id='history'></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modale bibliothèque -->
+<div id="gamesOverlay" class="overlay" onclick="if(event.target===this)closeGamesModal()">
+  <div class="modal">
+    <h2>📂 Parties enregistrées</h2>
+    <button class="btn-green" style="width:100%;margin-bottom:12px" onclick="newGame()">➕ Démarrer une nouvelle partie</button>
+    <div id="gamesList"></div>
+    <p class="game-meta" style="margin-top:14px">Sauvegarde automatique sur cet appareil / ce navigateur.</p>
+    <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="closeGamesModal()">Fermer</button>
+  </div>
+</div>
+
+<script>
+
+let state={players:[],scores:{},history:[],events:[],stats:{}};
+
+const RESERVED_NAMES = ['__proto__', 'constructor', 'prototype'];
+const MAX_EVENTS = 50;
+
+const LIB_KEY  = 'yaniv_v5';        // bibliothèque multi-parties (partagée avec v5)
+const OLD_KEY  = 'yaniv_pro_data';  // ancien format mono-partie (migration)
+const THEME_KEY = 'yaniv_dark';
+
+let library = { currentId:null, games:{} };
+
+// ---------- Utilitaires ----------
+function escapeHtml(str){ const d=document.createElement('div'); d.textContent=String(str); return d.innerHTML; }
+function csvEscape(field){ const s=String(field); return /[;"\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function logEvent(type,text){ state.events.unshift({type,text,timestamp:Date.now()}); if(state.events.length>MAX_EVENTS) state.events.length=MAX_EVENTS; }
+function uid(){ return 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function blankState(){ return {players:[],scores:{},history:[],events:[],stats:{}}; }
+function sanitizeState(p){ p=p||{}; return {
+    players: Array.isArray(p.players)?p.players:[],
+    scores:  (p.scores  && typeof p.scores ==='object')?p.scores :{},
+    history: Array.isArray(p.history)?p.history:[],
+    events:  Array.isArray(p.events)?p.events:[],
+    stats:   (p.stats   && typeof p.stats  ==='object')?p.stats  :{}
+}; }
+function defaultName(){ const d=new Date(),p=n=>String(n).padStart(2,'0');
+    return `Partie du ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function fmtDate(ts){ if(!ts) return '—'; const d=new Date(ts),p=n=>String(n).padStart(2,'0');
+    return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+// ---------- Persistance (bibliothèque) ----------
+function persist(){
+    const g=library.games[library.currentId];
+    if(g){ g.state=state; g.updatedAt=Date.now(); }
+    try{ localStorage.setItem(LIB_KEY, JSON.stringify(library)); }
+    catch(err){ console.error('Sauvegarde impossible :',err); }
+}
+function save(){ persist(); }
+
+function activate(id){
+    const g=library.games[id]; if(!g) return;
+    library.currentId=id; state=sanitizeState(g.state); g.state=state;
+    updateTitle(); render();
+}
+function createGame(name, doPersist){
+    const id=uid();
+    library.games[id]={id,name:(name||defaultName()),createdAt:Date.now(),updatedAt:Date.now(),state:blankState()};
+    library.currentId=id; state=library.games[id].state;
+    updateTitle(); render();
+    if(doPersist!==false) persist();
+    return id;
+}
+function loadLibrary(){
+    let raw=localStorage.getItem(LIB_KEY);
+    if(raw){
+        try{ const parsed=JSON.parse(raw);
+            if(parsed && parsed.games && typeof parsed.games==='object')
+                library={currentId:parsed.currentId||null, games:parsed.games};
+        }catch(err){
+            console.error('Bibliothèque corrompue :',err);
+            alert("Les parties enregistrées étaient corrompues. Une nouvelle bibliothèque a été démarrée.");
+            library={currentId:null,games:{}};
+        }
+    } else {
+        let old=localStorage.getItem(OLD_KEY);
+        if(old){ try{
+            const s=sanitizeState(JSON.parse(old)); const id=uid();
+            library.games[id]={id,name:'Partie récupérée',createdAt:Date.now(),updatedAt:Date.now(),state:s};
+            library.currentId=id;
+        }catch(err){} }
+    }
+    if(!library.currentId || !library.games[library.currentId]){
+        const ids=Object.keys(library.games);
+        if(ids.length){ ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0)); library.currentId=ids[0]; }
+        else createGame(defaultName(), false);
+    }
+    activate(library.currentId); persist();
+}
+
+// ---------- Gestion des parties ----------
+function updateTitle(){ const g=library.games[library.currentId];
+    document.getElementById('gameTitle').textContent = g ? g.name : '—'; }
+function newGame(){ const name=prompt('Nom de la nouvelle partie :', defaultName());
+    if(name===null) return; persist(); createGame(name.trim()||defaultName()); closeGamesModal(); }
+function loadGame(id){ if(!library.games[id]) return; persist(); activate(id); persist(); closeGamesModal(); }
+function deleteGame(id){ const g=library.games[id]; if(!g) return;
+    if(!confirm(`Supprimer la partie « ${g.name} » ?\nCette action est définitive.`)) return;
+    delete library.games[id];
+    if(library.currentId===id){ const ids=Object.keys(library.games);
+        if(ids.length){ ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0)); activate(ids[0]); }
+        else createGame(defaultName(), false);
+    }
+    persist(); renderGamesModal();
+}
+function renameGame(id){ const g=library.games[id]; if(!g) return;
+    const name=prompt('Nouveau nom de la partie :', g.name); if(name===null) return;
+    g.name=name.trim()||g.name; persist(); updateTitle(); renderGamesModal(); }
+function renameCurrent(){ if(library.currentId) renameGame(library.currentId); }
+function openGamesModal(){ persist(); renderGamesModal(); document.getElementById('gamesOverlay').classList.add('open'); }
+function closeGamesModal(){ document.getElementById('gamesOverlay').classList.remove('open'); }
+function renderGamesModal(){
+    const ids=Object.keys(library.games).sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));
+    const list=document.getElementById('gamesList');
+    if(!ids.length){ list.innerHTML='<p class="game-meta">Aucune partie enregistrée.</p>'; return; }
+    list.innerHTML=ids.map(id=>{
+        const g=library.games[id], cur=(id===library.currentId), st=g.state||{};
+        const pc=Array.isArray(st.players)?st.players.length:0, rc=Array.isArray(st.history)?st.history.length:0;
+        return `<div class="game-item ${cur?'current':''}">
+            <div style="min-width:0;flex:1">
+                <div style="font-weight:700">${escapeHtml(g.name)} ${cur?'🟢':''}</div>
+                <div class="game-meta">${pc} joueur(s) · ${rc} manche(s) · maj ${fmtDate(g.updatedAt)}</div>
+            </div>
+            <div class="game-actions">
+                ${cur?'':`<button class="btn-cyan" onclick="loadGame('${g.id}')">▶️ Reprendre</button>`}
+                <button class="btn-ghost" onclick="renameGame('${g.id}')">✏️</button>
+                <button class="btn-red" onclick="deleteGame('${g.id}')">🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ---------- Joueurs ----------
+function addPlayer(){
+    const input=document.getElementById('playerName'); let n=input.value.trim(); if(!n) return;
+    if(n.length>24){ alert("Le nom du joueur ne doit pas dépasser 24 caractères."); return; }
+    if(RESERVED_NAMES.includes(n)){ alert("Ce nom n'est pas autorisé."); return; }
+    if(state.players.some(p=>p.toLowerCase()===n.toLowerCase())){ alert(`"${n}" est déjà dans la partie.`); return; }
+    state.players.push(n); state.scores[n]=0; state.stats[n]={yaniv:0,asaf:0,bonus:0};
+    input.value=''; input.focus(); save(); render();
+}
+function removePlayer(name){
+    if(!state.players.includes(name)){ console.warn(`removePlayer: "${name}" introuvable`); return; }
+    if(state.players.length<=1){ alert("Impossible de supprimer le dernier joueur."); return; }
+    if(!confirm(`Supprimer "${name}" de la partie ?`)) return;
+    state.players=state.players.filter(p=>p!==name);
+    delete state.scores[name]; delete state.stats[name];
+    state.history.forEach(r=>{ delete r[name]; });
+    recompute(); logEvent('asaf', `🗑️ ${name} a été supprimé de la partie`); save(); render();
+}
+function quickZero(index){
+    const pts=document.getElementById('pts_'+index), y=document.getElementById('y_'+index), a=document.getElementById('a_'+index);
+    if(!pts||!y||!a) return; pts.value=0; y.checked=true; a.checked=false;
+}
+function filterNumericInput(e){
+    if(!/[0-9]/.test(e.key) && !['Backspace','Delete','Tab','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+}
+
+// ---------- Rendu ----------
+function render(){
+    document.getElementById('players').innerHTML = state.players.length
+      ? '<div class="pill-wrap">'+state.players.map((p,i)=>`
+          <span class="pill-row"><span class="pill-name">${escapeHtml(p)}</span>
+          <button type="button" class="remove-player-btn del" data-index="${i}" title="Supprimer">✕</button></span>
+        `).join('')+'</div>'
+      : '<div class="empty">Aucun joueur</div>';
+
+    document.getElementById('roundInputs').innerHTML = state.players.length
+      ? state.players.map((p,i)=>`
+        <div class="pcard">
+            <span class="pcard-name">${escapeHtml(p)}</span>
+            <input type='tel' id='pts_${i}' class="pts" value='' placeholder='0' inputmode='numeric' pattern='[0-9]*' onkeydown='filterNumericInput(event)'>
+            <button type="button" class="quick-zero-btn qz" data-index="${i}">0</button>
+            <label class="tog y"><input type='checkbox' id='y_${i}'>🎖️ Yaniv</label>
+            <label class="tog a"><input type='checkbox' id='a_${i}'>⚔️ Asaf</label>
+        </div>`).join('')
+      : '<div class="card empty">Ajoute des joueurs pour saisir une manche</div>';
+
+    let scoresArr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
+    const minScore=scoresArr.length?scoresArr[0][1]:null, maxScore=scoresArr.length?scoresArr[scoresArr.length-1][1]:null;
+    const hasSpread=scoresArr.length>1 && minScore!==maxScore;
+    document.getElementById('ranking').innerHTML = scoresArr.length ? scoresArr.map((x,i)=>{
+        const isLeader=hasSpread&&x[1]===minScore, isLoser=hasSpread&&x[1]===maxScore;
+        const medal=['🥇','🥈','🥉'][i]||('#'+(i+1));
+        return `<div class="lb-row ${isLeader?'leader':''} ${isLoser?'loser':''}">
+            <div class="lb-rank">${medal}</div>
+            <div class="lb-name">${escapeHtml(x[0])}</div>
+            <div class="lb-score">${x[1]}<span class="lb-unit">pts</span></div>
+        </div>`;
+    }).join('') : '<div class="empty">En attente de joueurs…</div>';
+
+    document.getElementById('events').innerHTML = state.events.length
+      ? state.events.slice(0,3).map(e=>`<div class='ev ${e.type}'>${escapeHtml(e.text)}</div>`).join('')
+      : '<div class="empty">Aucun événement pour l’instant</div>';
+
+    document.getElementById('historyHeader').innerHTML='<th>Manche</th>'+state.players.map(p=>`<th>${escapeHtml(p)}</th>`).join('');
+    document.getElementById('history').innerHTML = state.history.length ? state.history.map((h,i)=>`
+        <tr><td><b>R${i+1}</b></td>
+            ${state.players.map(p=>{ let c=h[p]; if(!c) return '<td>-</td>';
+                let m=String(c.score); if(c.yaniv)m+=' 🎖️'; if(c.asaf)m+=' ⚔️'; if(c.bonus)m+=' ⤵️';
+                return `<td>${escapeHtml(m)}</td>`; }).join('')}
+        </tr>`).join('') : `<tr><td colspan="${state.players.length+1}" style="color:var(--muted)">Aucune manche jouée</td></tr>`;
+
+    document.getElementById('stats').innerHTML = state.players.length ? state.players.map(p=>{
+        let s=state.stats[p]||{yaniv:0,asaf:0,bonus:0};
+        return `<div class="stat-tile"><div class="stat-name">${escapeHtml(p)}</div>
+            <div class="stat-line"><span>🎖️ ${s.yaniv||0}</span><span>⚔️ ${s.asaf||0}</span><span>⤵️ ${s.bonus||0}</span></div></div>`;
+    }).join('') : '<div class="empty">Aucune statistique</div>';
+}
+
+// ---------- Délégation d'événements ----------
+document.getElementById('players').addEventListener('click',(e)=>{
+    const btn=e.target.closest('.remove-player-btn'); if(!btn) return;
+    const name=state.players[parseInt(btn.dataset.index,10)]; if(name!==undefined) removePlayer(name);
+});
+document.getElementById('roundInputs').addEventListener('click',(e)=>{
+    const btn=e.target.closest('.quick-zero-btn'); if(!btn) return;
+    quickZero(parseInt(btn.dataset.index,10));
+});
+document.getElementById('playerName').addEventListener('keydown',(e)=>{ if(e.key==='Enter') addPlayer(); });
+
+// ---------- Logique de jeu ----------
+function recompute(){
+    for(let p of state.players) state.scores[p]=0;
+    state.players.forEach(p=>state.stats[p]={yaniv:0,asaf:0,bonus:0});
+    for(let round of state.history){
+        for(let p of state.players){
+            if(!round[p]) continue;
+            state.scores[p]+=round[p].score;
+            if(round[p].bonus){ state.scores[p]-=50; state.stats[p].bonus++; }
+            if(round[p].yaniv) state.stats[p].yaniv++;
+            if(round[p].asaf) state.stats[p].asaf++;
+        }
+    }
+}
+function saveRound(){
+    if(!state.players.length){ alert("Ajoutez au moins un joueur avant d'enregistrer une manche."); return; }
+    let round={};
+    state.players.forEach((p,i)=>{
+        let ptsInput=document.getElementById('pts_'+i);
+        let pts=parseInt(ptsInput?ptsInput.value:'',10); if(isNaN(pts)) pts=0;
+        let asaf=(document.getElementById('a_'+i)||{}).checked||false;
+        let yan =(document.getElementById('y_'+i)||{}).checked||false;
+        let score=asaf?pts+30:pts;
+        let future=(state.scores[p]||0)+score;
+        let bonus= score>0 && (future===50||future===100||future===150);
+        round[p]={score,asaf,yaniv:yan,bonus};
+        if(yan)  logEvent('yaniv', `🎖️ ${p} a annoncé Yaniv`);
+        if(asaf) logEvent('asaf',  `⚔️ ${p} subit un Asaf (+30)`);
+        if(bonus)logEvent('bonus', `⤵️ ${p} valide un palier (-50)`);
+    });
+    state.history.push(round); recompute(); save(); render();
+}
+function undoRound(){
+    if(!state.history.length) return;
+    state.history.pop(); logEvent('asaf','↩️ Dernière manche annulée'); recompute(); save(); render();
+}
+function exportCSV(){
+    let csv='Round;'+state.players.map(csvEscape).join(';')+'\n';
+    state.history.forEach((r,i)=>{ let row=csvEscape(`Round ${i+1}`);
+        state.players.forEach(p=>{ row+=';'+csvEscape(r[p]?r[p].score:0); }); csv+=row+'\n'; });
+    const g=library.games[library.currentId];
+    const fname=((g&&g.name)?g.name:'yaniv').replace(/[^a-z0-9_\-]+/gi,'_')+'.csv';
+    let a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=fname; a.click();
+}
+function toggleTheme(){
+    const light=document.body.classList.toggle('light');
+    try{ localStorage.setItem(THEME_KEY, light?'0':'1'); }catch(e){}
+}
+
+// ---------- Démarrage ----------
+try{ if(localStorage.getItem(THEME_KEY)==='0') document.body.classList.add('light'); }catch(e){}
+loadLibrary();
+</script>
+</body>
+</html>

@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<!-- Compatible tout mobile : on autorise le zoom (accessibilité) ; inputs en 16px pour éviter l'auto-zoom iOS -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#007aff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Yaniv</title>
+<style>
+:root{ --bg:#f2f2f7; --card:#fafafa; --panel:#fff; --line:#ddd; --muted:#666; }
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'Noto Sans',sans-serif;background:var(--bg);margin:0;padding:15px;transition:background .3s,color .3s;-webkit-text-size-adjust:100%}
+.app{max-width:700px;margin:auto;background:var(--panel);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+h1{margin:0 0 10px}
+h2{margin:18px 0 8px}
+.row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.row input{flex:1;min-width:120px}
+.card{padding:12px;margin:10px 0;background:var(--card);border-radius:10px}
+input,button{padding:12px;border-radius:8px;border:1px solid #ccc;font-size:16px}
+button{background:#007aff;color:#fff;border:none;font-weight:600;cursor:pointer;-webkit-appearance:none;appearance:none;line-height:1.1}
+button:active{filter:brightness(.92)}
+table{width:100%;border-collapse:collapse;margin:10px 0}
+th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left}
+th{background:#f2f2f7}
+.leader{background:#d4edda;font-weight:bold}
+.loser{background:#f8d7da}
+.event{padding:10px;border-radius:8px;margin:5px 0;font-size:14px;font-weight:500}
+.yaniv{background:#d1ecf1;color:#0c5460}
+.asaf{background:#f8d7da;color:#721c24}
+.bonus{background:#d4edda;color:#155724}
+.flex-input{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.toggle-group{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toggle-group label{white-space:nowrap}
+
+/* ---- Barre de partie ---- */
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.game-title{font-weight:700;font-size:15px;background:#f2f2f7;padding:10px 12px;border-radius:10px;cursor:pointer;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #e2e2e6}
+.btn-sec{background:#8e8e93}
+
+/* ---- Modale bibliothèque ---- */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:flex-start;justify-content:center;padding:16px;overflow:auto;z-index:100}
+.overlay.open{display:flex}
+.modal{background:var(--panel);border-radius:16px;padding:18px;max-width:620px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.25);margin:auto}
+.game-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;margin:8px 0;flex-wrap:wrap}
+.game-item.current{border-color:#34c759;background:#eafaef}
+.game-meta{font-size:13px;color:var(--muted);margin-top:2px}
+.game-actions{display:flex;gap:6px;flex-wrap:wrap}
+.game-actions button{padding:9px 11px;font-size:13px}
+
+/* ---- Thème sombre ---- */
+.dark{background:#1c1c1e;color:#fff}
+.dark .app{background:#2c2c2e;color:#fff}
+.dark .card,.dark th{background:#3a3a3c}
+.dark th,.dark td{border-bottom:1px solid #48484a}
+.dark .game-title{background:#3a3a3c;border-color:#48484a;color:#fff}
+.dark .modal{background:#2c2c2e;color:#fff}
+.dark .game-item{border-color:#48484a}
+.dark .game-item.current{background:#14361f;border-color:#34c759}
+.dark .game-meta{color:#aaa}
+.dark input{background:#1c1c1e;color:#fff;border-color:#48484a}
+
+/* ---- Petits écrans ---- */
+@media(max-width:480px){
+  body{padding:8px}
+  .app{padding:14px;border-radius:12px}
+  th,td{padding:8px}
+}
+</style>
+</head>
+<body>
+<div class='app'>
+
+<div class="topbar">
+    <div class="game-title" id="gameTitle" onclick="renameCurrent()" title="Renommer la partie">🎮 —</div>
+    <button class="btn-sec" onclick="openGamesModal()">📂 Parties</button>
+    <button onclick='toggleDark()'>🌙/☀️</button>
+</div>
+
+<h1>🏆 Yaniv</h1>
+
+<div class='row'>
+    <input id='playerName' placeholder='Nom du joueur' maxlength='24' autocomplete="off">
+    <button onclick='addPlayer()'>Ajouter</button>
+</div>
+<div id='players' class='card'></div>
+
+<h2>Classement</h2>
+<table>
+    <thead><tr><th>Position / Joueur</th><th>Score Cumulé</th></tr></thead>
+    <tbody id='ranking'></tbody>
+</table>
+
+<h2>Saisie Manche</h2>
+<div id='roundInputs' class='card'></div>
+<div class='row'>
+    <button onclick='saveRound()' style="background:#34c759;flex:1">Enregistrer la manche</button>
+    <button onclick='undoRound()' style="background:#ff9500">↩️ Annuler</button>
+</div>
+<div class='row' style="margin-top:10px">
+    <button onclick='newGame()' style="background:#5856d6;flex:1">➕ Nouvelle partie</button>
+    <button onclick='openGamesModal()' class='btn-sec'>📂 Parties enregistrées</button>
+    <button onclick='exportCSV()' style="background:#8e8e93">📤 CSV</button>
+</div>
+
+<h2>Statistiques</h2>
+<div id='stats' class='card'></div>
+
+<h2>📋 Événements</h2>
+<div id='events'></div>
+
+<h2>📖 Historique des Rounds</h2>
+<div style="overflow-x:auto">
+<table>
+    <thead><tr id="historyHeader"><th>Manche</th></tr></thead>
+    <tbody id='history'></tbody>
+</table>
+</div>
+</div>
+
+<!-- Modale : bibliothèque de parties -->
+<div id="gamesOverlay" class="overlay" onclick="if(event.target===this)closeGamesModal()">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 style="margin:0">📂 Parties enregistrées</h2>
+      <button class="btn-sec" onclick="closeGamesModal()">✖</button>
+    </div>
+    <button style="width:100%;background:#34c759;margin-bottom:10px" onclick="newGame()">➕ Démarrer une nouvelle partie</button>
+    <div id="gamesList"></div>
+    <p class="game-meta" style="margin-top:12px">Toutes les parties sont enregistrées automatiquement sur cet appareil, dans ce navigateur.</p>
+  </div>
+</div>
+
+<script>
+
+let state={players:[],scores:{},history:[],events:[],stats:{}};
+
+const RESERVED_NAMES = ['__proto__', 'constructor', 'prototype'];
+const MAX_EVENTS = 50;
+
+const LIB_KEY  = 'yaniv_v5';        // bibliothèque multi-parties
+const OLD_KEY  = 'yaniv_pro_data';  // ancien format mono-partie (migration)
+const DARK_KEY = 'yaniv_dark';
+
+let library = { currentId:null, games:{} };
+
+// ---------- Utilitaires ----------
+
+function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
+function csvEscape(field){
+    const str = String(field);
+    if(/[;"\n]/.test(str)){
+        return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+}
+
+function logEvent(type, text){
+    state.events.unshift({type, text, timestamp: Date.now()});
+    if(state.events.length > MAX_EVENTS){
+        state.events.length = MAX_EVENTS;
+    }
+}
+
+function uid(){
+    return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+function blankState(){
+    return {players:[],scores:{},history:[],events:[],stats:{}};
+}
+
+function sanitizeState(parsed){
+    parsed = parsed || {};
+    return {
+        players: Array.isArray(parsed.players) ? parsed.players : [],
+        scores:  (parsed.scores  && typeof parsed.scores  === 'object') ? parsed.scores  : {},
+        history: Array.isArray(parsed.history) ? parsed.history : [],
+        events:  Array.isArray(parsed.events)  ? parsed.events  : [],
+        stats:   (parsed.stats   && typeof parsed.stats   === 'object') ? parsed.stats   : {}
+    };
+}
+
+function defaultName(){
+    const d = new Date();
+    const p = n => String(n).padStart(2,'0');
+    return `Partie du ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function fmtDate(ts){
+    if(!ts) return '—';
+    const d = new Date(ts);
+    const p = n => String(n).padStart(2,'0');
+    return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// ---------- Persistance (bibliothèque) ----------
+
+function persist(){
+    const g = library.games[library.currentId];
+    if(g){
+        g.state = state;
+        g.updatedAt = Date.now();
+    }
+    try{
+        localStorage.setItem(LIB_KEY, JSON.stringify(library));
+    }catch(err){
+        console.error('Erreur lors de la sauvegarde :', err);
+    }
+}
+
+// Alias : tout le code de jeu appelle save()
+function save(){ persist(); }
+
+function activate(id){
+    const g = library.games[id];
+    if(!g) return;
+    library.currentId = id;
+    state = sanitizeState(g.state);
+    g.state = state;           // relie l'état de travail au slot
+    updateTitle();
+    render();
+}
+
+function createGame(name, doPersist){
+    const id = uid();
+    library.games[id] = {
+        id,
+        name: (name || defaultName()),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        state: blankState()
+    };
+    library.currentId = id;
+    state = library.games[id].state;
+    updateTitle();
+    render();
+    if(doPersist !== false) persist();
+    return id;
+}
+
+function loadLibrary(){
+    let raw = localStorage.getItem(LIB_KEY);
+    if(raw){
+        try{
+            const parsed = JSON.parse(raw);
+            if(parsed && parsed.games && typeof parsed.games === 'object'){
+                library = { currentId: parsed.currentId || null, games: parsed.games };
+            }
+        }catch(err){
+            console.error('Bibliothèque corrompue :', err);
+            alert("Les parties enregistrées étaient corrompues. Une nouvelle bibliothèque a été démarrée.");
+            library = { currentId:null, games:{} };
+        }
+    } else {
+        // Migration depuis l'ancienne version mono-partie
+        let old = localStorage.getItem(OLD_KEY);
+        if(old){
+            try{
+                const s = sanitizeState(JSON.parse(old));
+                const id = uid();
+                library.games[id] = { id, name:'Partie récupérée', createdAt:Date.now(), updatedAt:Date.now(), state:s };
+                library.currentId = id;
+            }catch(err){ /* ancien format illisible : on ignore */ }
+        }
+    }
+
+    // Garantir une partie courante valide
+    if(!library.currentId || !library.games[library.currentId]){
+        const ids = Object.keys(library.games);
+        if(ids.length){
+            ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));
+            library.currentId = ids[0];
+        } else {
+            createGame(defaultName(), false);
+        }
+    }
+
+    activate(library.currentId);
+    persist();
+}
+
+// ---------- Gestion des parties (UI) ----------
+
+function updateTitle(){
+    const g = library.games[library.currentId];
+    document.getElementById('gameTitle').textContent = '🎮 ' + (g ? g.name : '—');
+}
+
+function newGame(){
+    const name = prompt('Nom de la nouvelle partie :', defaultName());
+    if(name === null) return;                 // annulé
+    persist();                                // sécurise la partie en cours
+    createGame(name.trim() || defaultName());
+    closeGamesModal();
+}
+
+function loadGame(id){
+    if(!library.games[id]) return;
+    persist();          // enregistre la partie courante avant de changer
+    activate(id);
+    persist();
+    closeGamesModal();
+}
+
+function deleteGame(id){
+    const g = library.games[id];
+    if(!g) return;
+    if(!confirm(`Supprimer la partie « ${g.name} » ?\nCette action est définitive.`)) return;
+
+    delete library.games[id];
+
+    if(library.currentId === id){
+        const ids = Object.keys(library.games);
+        if(ids.length){
+            ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));
+            activate(ids[0]);
+        } else {
+            createGame(defaultName(), false);
+        }
+    }
+    persist();
+    renderGamesModal();
+}
+
+function renameGame(id){
+    const g = library.games[id];
+    if(!g) return;
+    const name = prompt('Nouveau nom de la partie :', g.name);
+    if(name === null) return;
+    g.name = name.trim() || g.name;
+    persist();
+    updateTitle();
+    renderGamesModal();
+}
+
+function renameCurrent(){
+    if(library.currentId) renameGame(library.currentId);
+}
+
+function openGamesModal(){
+    persist();
+    renderGamesModal();
+    document.getElementById('gamesOverlay').classList.add('open');
+}
+
+function closeGamesModal(){
+    document.getElementById('gamesOverlay').classList.remove('open');
+}
+
+function renderGamesModal(){
+    const ids = Object.keys(library.games)
+        .sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));
+
+    const list = document.getElementById('gamesList');
+    if(!ids.length){ list.innerHTML = '<p class="game-meta">Aucune partie enregistrée.</p>'; return; }
+
+    list.innerHTML = ids.map(id=>{
+        const g = library.games[id];
+        const cur = (id === library.currentId);
+        const st = g.state || {};
+        const pc = Array.isArray(st.players) ? st.players.length : 0;
+        const rc = Array.isArray(st.history) ? st.history.length : 0;
+        return `
+        <div class="game-item ${cur?'current':''}">
+            <div style="min-width:0;flex:1">
+                <div style="font-weight:600">${escapeHtml(g.name)} ${cur?'✅ (en cours)':''}</div>
+                <div class="game-meta">${pc} joueur(s) · ${rc} manche(s) · maj ${fmtDate(g.updatedAt)}</div>
+            </div>
+            <div class="game-actions">
+                ${cur ? '' : `<button style="background:#007aff" onclick="loadGame('${g.id}')">▶️ Reprendre</button>`}
+                <button class="btn-sec" onclick="renameGame('${g.id}')">✏️</button>
+                <button style="background:#ff3b30" onclick="deleteGame('${g.id}')">🗑️</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ---------- Joueurs ----------
+
+function addPlayer(){
+    const input = document.getElementById('playerName');
+    let n = input.value.trim();
+    if(!n) return;
+
+    if(n.length > 24){
+        alert("Le nom du joueur ne doit pas dépasser 24 caractères.");
+        return;
+    }
+    if(RESERVED_NAMES.includes(n)){
+        alert("Ce nom n'est pas autorisé.");
+        return;
+    }
+    if(state.players.some(p => p.toLowerCase() === n.toLowerCase())){
+        alert(`"${n}" est déjà dans la partie.`);
+        return;
+    }
+
+    state.players.push(n);
+    state.scores[n]=0;
+    state.stats[n]={yaniv:0,asaf:0,bonus:0};
+    input.value='';
+    input.focus();
+    save();
+    render();
+}
+
+/**
+ * Supprime un joueur de la partie en cours.
+ * @param {string} name - Nom du joueur à supprimer.
+ */
+function removePlayer(name){
+    if(!state.players.includes(name)){
+        console.warn(`removePlayer: "${name}" introuvable dans state.players`);
+        return;
+    }
+
+    if(state.players.length <= 1){
+        alert("Impossible de supprimer le dernier joueur.");
+        return;
+    }
+
+    if(!confirm(`Supprimer "${name}" de la partie ?`)){
+        return;
+    }
+
+    state.players = state.players.filter(p => p !== name);
+    delete state.scores[name];
+    delete state.stats[name];
+    state.history.forEach(round => { delete round[name]; });
+
+    recompute();
+    logEvent('asaf', `🗑️ ${name} a été supprimé de la partie`);
+
+    save();
+    render();
+}
+
+function quickZero(index) {
+    const pts = document.getElementById('pts_' + index);
+    const y = document.getElementById('y_' + index);
+    const a = document.getElementById('a_' + index);
+    if(!pts || !y || !a) return;
+    pts.value = 0;
+    y.checked = true;
+    a.checked = false;
+}
+
+function filterNumericInput(event) {
+    if (!/[0-9]/.test(event.key) && event.key !== 'Backspace' && event.key !== 'Delete' && event.key !== 'Tab' && event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+        event.preventDefault();
+    }
+}
+
+// ---------- Rendu ----------
+
+function render(){
+    document.getElementById('players').innerHTML =
+    state.players.length
+    ? '<b>En jeu :</b><br>' +
+      state.players.map((p, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee">
+            <span>${escapeHtml(p)}</span>
+            <button type="button" class="remove-player-btn" data-index="${i}" style="background:#ff3b30;padding:6px 12px;font-size:14px">
+                ❌ Supprimer
+            </button>
+        </div>
+      `).join('')
+    : 'Aucun joueur';
+
+    // type="tel" + inputmode="numeric" force le vrai pavé numérique sur mobile
+    document.getElementById('roundInputs').innerHTML=state.players.map((p, i)=>`
+        <div class="flex-input">
+            <span style="font-weight:bold;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p)}</span>
+            <input type='tel' id='pts_${i}' value='' placeholder='0' inputmode='numeric' pattern='[0-9]*' onkeydown='filterNumericInput(event)' style="width:64px;text-align:center">
+            <div class="toggle-group">
+                <button type="button" class="quick-zero-btn" data-index="${i}" style="padding:6px 10px;font-size:12px;background:#ff9500">0</button>
+                <label><input type='checkbox' id='y_${i}'> 🎖️ Yaniv</label>
+                <label><input type='checkbox' id='a_${i}'> ⚔️ Asaf</label>
+            </div>
+        </div>
+    `).join('');
+
+    let scoresArr = Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
+    const minScore = scoresArr.length ? scoresArr[0][1] : null;
+    const maxScore = scoresArr.length ? scoresArr[scoresArr.length-1][1] : null;
+    const hasSpread = scoresArr.length > 1 && minScore !== maxScore;
+
+    document.getElementById('ranking').innerHTML=scoresArr.map((x,i)=>{
+        const isLeader = hasSpread && x[1] === minScore;
+        const isLoser = hasSpread && x[1] === maxScore;
+        return `
+        <tr class='${isLeader?'leader':''} ${isLoser?'loser':''}'>
+            <td>${['🥇','🥈','🥉'][i]||'👤'} ${escapeHtml(x[0])}</td>
+            <td><b>${x[1]} pts</b></td>
+        </tr>
+    `;
+    }).join('');
+
+    document.getElementById('events').innerHTML=state.events.slice(0,3).map(e=>`<div class='event ${e.type}'>${escapeHtml(e.text)}</div>`).join('');
+
+    document.getElementById('historyHeader').innerHTML = '<th>Manche</th>' + state.players.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+
+    document.getElementById('history').innerHTML=state.history.map((h,i)=>`
+        <tr>
+            <td><b>R${i+1}</b></td>
+            ${state.players.map(p => {
+                let cell = h[p];
+                if(!cell) return '<td>-</td>';
+                let mark = String(cell.score);
+                if(cell.yaniv) mark += ' 🎖️';
+                if(cell.asaf) mark += ' ⚔️';
+                if(cell.bonus) mark += ' ⤵️';
+                return `<td>${escapeHtml(mark)}</td>`;
+            }).join('')}
+        </tr>
+    `).join('');
+
+    let st='';
+    for(let p of state.players){
+        let s=state.stats[p]||{yaniv:0,asaf:0,bonus:0};
+        st+=`<b>${escapeHtml(p)}</b> | Yaniv : ${s.yaniv||0} 🎖️ | Asaf : ${s.asaf||0} ⚔️ | Paliers -50 : ${s.bonus||0} ⤵️<br>`;
+    }
+    document.getElementById('stats').innerHTML=st || 'Aucune statistique';
+}
+
+// ---------- Délégation d'événements (sûre vis-à-vis des noms spéciaux) ----------
+
+document.getElementById('players').addEventListener('click', (e) => {
+    const btn = e.target.closest('.remove-player-btn');
+    if(!btn) return;
+    const idx = parseInt(btn.dataset.index, 10);
+    const name = state.players[idx];
+    if(name !== undefined) removePlayer(name);
+});
+
+document.getElementById('roundInputs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.quick-zero-btn');
+    if(!btn) return;
+    quickZero(parseInt(btn.dataset.index, 10));
+});
+
+document.getElementById('playerName').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') addPlayer();
+});
+
+// ---------- Logique de jeu ----------
+
+function recompute(){
+    for(let p of state.players) state.scores[p]=0;
+    state.players.forEach(p=>state.stats[p]={yaniv:0,asaf:0,bonus:0});
+
+    for(let round of state.history){
+        for(let p of state.players){
+            if(!round[p]) continue;
+            state.scores[p]+=round[p].score;
+            if(round[p].bonus){
+                state.scores[p]-=50;
+                state.stats[p].bonus++;
+            }
+            if(round[p].yaniv) state.stats[p].yaniv++;
+            if(round[p].asaf) state.stats[p].asaf++;
+        }
+    }
+}
+
+function saveRound(){
+    if(!state.players.length){
+        alert("Ajoutez au moins un joueur avant d'enregistrer une manche.");
+        return;
+    }
+
+    let round={};
+
+    state.players.forEach((p, i) => {
+        let ptsInput = document.getElementById('pts_'+i);
+        let pts = parseInt(ptsInput ? ptsInput.value : '', 10);
+        if(isNaN(pts)) pts = 0;
+
+        let asafEl = document.getElementById('a_'+i);
+        let yanEl = document.getElementById('y_'+i);
+        let asaf = asafEl ? asafEl.checked : false;
+        let yan = yanEl ? yanEl.checked : false;
+
+        let score=asaf?pts+30:pts;
+        let future=(state.scores[p]||0)+score;
+        // Palier -50 uniquement si la manche apporte réellement des points (évite la cascade sur des 0)
+        let bonus = score > 0 && (future === 50 || future === 100 || future === 150);
+
+        round[p]={score,asaf,yaniv:yan,bonus};
+
+        if(yan) logEvent('yaniv', `🎖️ ${p} a annoncé Yaniv`);
+        if(asaf) logEvent('asaf', `⚔️ ${p} subit un Asaf (+30)`);
+        if(bonus) logEvent('bonus', `⤵️ ${p} valide un palier (-50)`);
+    });
+
+    state.history.push(round);
+    recompute();
+    save();
+    render();
+}
+
+function undoRound(){
+    if(!state.history.length)return;
+    state.history.pop();
+    logEvent('asaf', '↩️ Dernière manche annulée');
+    recompute();
+    save();
+    render();
+}
+
+function exportCSV(){
+    let csv='Round;' + state.players.map(csvEscape).join(';') + '\n';
+    state.history.forEach((r,i)=>{
+        let row = csvEscape(`Round ${i+1}`);
+        state.players.forEach(p => {
+            row += ';' + csvEscape(r[p] ? r[p].score : 0);
+        });
+        csv += row + '\n';
+    });
+    const g = library.games[library.currentId];
+    const fname = ((g && g.name) ? g.name : 'yaniv').replace(/[^a-z0-9_\-]+/gi,'_') + '.csv';
+    let a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download=fname;
+    a.click();
+}
+
+function toggleDark(){
+    const on = document.body.classList.toggle('dark');
+    try{ localStorage.setItem(DARK_KEY, on ? '1' : '0'); }catch(e){}
+}
+
+// ---------- Démarrage ----------
+try{ if(localStorage.getItem(DARK_KEY) === '1') document.body.classList.add('dark'); }catch(e){}
+loadLibrary();
+</script>
+</body>
+</html>

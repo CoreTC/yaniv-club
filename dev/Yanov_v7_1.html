@@ -108,9 +108,6 @@ input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,200,134,.16)}
 .addrow input{flex:1}
 select{font-family:var(--sans);font-size:15px;color:var(--ink);background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:14px;padding:14px;width:100%;-webkit-appearance:none;appearance:none;outline:none}
 select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(233,200,134,.16)}
-.rrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;font-size:15px}
-.rrow input[type=checkbox]{width:22px;height:22px;accent-color:var(--gold)}
-.rrow input[type=tel]{width:90px}
 
 /* ---------- Events / History / Stats ---------- */
 .ev{padding:12px 15px;border-radius:13px;margin:7px 0;font-size:14px;font-weight:600;border-left:3px solid var(--muted);background:var(--card)}
@@ -215,7 +212,6 @@ tr:last-child td{border-bottom:none}
       <div class="kicker">Score Club</div>
     </div>
     <button class="btn-gold full" style="margin-top:22px" onclick="newGame()">＋ Nouvelle partie</button>
-    <button class="btn-ghost full" style="margin-top:10px" onclick="openPalmares()">🏆 Palmarès du groupe</button>
     <h2>Reprendre une partie</h2>
     <div id="lobbyList"></div>
   </section>
@@ -274,17 +270,6 @@ tr:last-child td{border-bottom:none}
       <select id="voiceSel" onchange="onVoiceChange()"></select>
       <button class="btn-ghost full" style="margin-top:8px" onclick="speak('Bonjour, voici la voix des annonces.')">🔊 Tester la voix</button>
       <div class="muted" style="font-size:12px;margin-top:8px">« Auto » choisit une voix féminine si ton appareil en a une. Sinon installe-en une (iPhone : Réglages ▸ Accessibilité ▸ Contenu énoncé ▸ Voix ▸ Français) puis reviens ici.</div>
-      <h2>Règles</h2>
-      <button class="btn-ghost full" onclick="openRules()">⚙️ Règles de la partie</button>
-      <h2>Sauvegarde & partage</h2>
-      <button class="btn-gold full" onclick="shareGame()">🔗 Partager cette partie</button>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-        <button class="btn-ghost" onclick="importCode()">📋 Coller un lien reçu</button>
-        <button class="btn-ghost" onclick="exportAll()">💾 Exporter (fichier)</button>
-        <button class="btn-ghost" onclick="importFileTrigger()">📥 Importer (fichier)</button>
-      </div>
-      <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importFile(event)">
-      <div class="muted" style="font-size:12px;margin-top:8px">« Partager » envoie la partie en cours par message : la personne ouvre le lien et la partie s'importe toute seule. « Exporter » sauvegarde <b>toutes</b> tes parties dans un fichier.</div>
       <h2>Options</h2>
       <button class="btn-red full" onclick="deleteCurrent()">🗑️ Supprimer cette partie</button>
     </div>
@@ -310,9 +295,8 @@ tr:last-child td{border-bottom:none}
       <button onclick="padKey('C')">C</button><button onclick="padKey('0')">0</button><button onclick="padKey('back')">⌫</button>
     </div>
     <div class="sheet-foot">
-      <button class="btn-red" id="delRoundBtn" style="display:none" onclick="deleteEditedRound()" title="Supprimer cette manche">🗑️</button>
       <button class="btn-ghost" onclick="closeRound()">Annuler</button>
-      <button class="btn-emer" onclick="commitRound()">✔ Valider</button>
+      <button class="btn-emer" onclick="commitRound()">✔ Valider la manche</button>
     </div>
   </div>
 </div>
@@ -322,26 +306,6 @@ tr:last-child td{border-bottom:none}
   <div class="uibox repbox">
     <div id="reportBody"></div>
     <button class="btn-ghost full" style="margin-top:14px" onclick="closeReport()">Fermer</button>
-  </div>
-</div>
-
-<!-- Modale Palmarès -->
-<div id="palmaresModal" class="uiback" onclick="if(event.target===this)closePalmares()">
-  <div class="uibox repbox">
-    <div id="palmaresBody"></div>
-    <button class="btn-ghost full" style="margin-top:14px" onclick="closePalmares()">Fermer</button>
-  </div>
-</div>
-
-<!-- Modale Règles -->
-<div id="rulesModal" class="uiback" onclick="if(event.target===this)closeRules()">
-  <div class="uibox">
-    <div class="t">⚙️ Règles de la partie</div>
-    <label class="rrow"><span>Défaite au-dessus de</span><input id="rLimit" type="tel" inputmode="numeric" pattern="[0-9]*" style="width:90px;text-align:center"></label>
-    <label class="rrow"><span>Pénalité Asaf (+)</span><input id="rAsaf" type="tel" inputmode="numeric" pattern="[0-9]*" style="width:90px;text-align:center"></label>
-    <label class="rrow"><span>Paliers −50 (50/100/150)</span><input id="rPal" type="checkbox"></label>
-    <label class="rrow"><span>« Yaniv » met les points à 0</span><input id="rYz" type="checkbox"></label>
-    <div class="f"><button class="btn-ghost" onclick="closeRules()">Annuler</button><button class="btn-gold" onclick="saveRules()">Enregistrer</button></div>
   </div>
 </div>
 
@@ -364,7 +328,7 @@ const RESERVED_NAMES=['__proto__','constructor','prototype'];
 const MAX_EVENTS=50;
 const LIB_KEY='yaniv_v5', OLD_KEY='yaniv_pro_data';
 const VOICE_KEY='yaniv_voice';
-// limite de défaite désormais paramétrable par partie (state.rules.limit), défaut 200 — voir RULES()
+const LIMITE=200; // on perd dès qu'on DÉPASSE 200 (≥ 201)
 const CHART_COLORS=['#e9c886','#2fd39b','#6cb7ff','#ff7ad9','#ffa657','#e46a6a','#b28dff','#7ee787'];
 let library={currentId:null,games:{}};
 let curTab='rank', curView='lobby';
@@ -396,8 +360,8 @@ function escapeHtml(s){const d=document.createElement('div');d.textContent=Strin
 function csvEscape(f){const s=String(f);return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
 function logEvent(t,x){state.events.unshift({type:t,text:x,timestamp:Date.now()});if(state.events.length>MAX_EVENTS)state.events.length=MAX_EVENTS;}
 function uid(){return 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
-function blankState(){return {players:[],scores:{},history:[],events:[],stats:{},dealer:null,startedAt:null,endedAt:null,finished:false,rules:defaultRules()};}
-function sanitizeState(p){p=p||{};const r=p.rules||{};return{
+function blankState(){return {players:[],scores:{},history:[],events:[],stats:{},dealer:null,startedAt:null,endedAt:null,finished:false};}
+function sanitizeState(p){p=p||{};return{
   players:Array.isArray(p.players)?p.players:[],
   scores:(p.scores&&typeof p.scores==='object')?p.scores:{},
   history:Array.isArray(p.history)?p.history:[],
@@ -406,8 +370,7 @@ function sanitizeState(p){p=p||{};const r=p.rules||{};return{
   dealer:typeof p.dealer==='string'?p.dealer:null,
   startedAt:typeof p.startedAt==='number'?p.startedAt:null,
   endedAt:typeof p.endedAt==='number'?p.endedAt:null,
-  finished:!!p.finished,
-  rules:{limit:Number.isFinite(r.limit)?r.limit:200,asaf:Number.isFinite(r.asaf)?r.asaf:30,paliers:r.paliers!==false,yanivZero:r.yanivZero!==false}};}
+  finished:!!p.finished};}
 function defaultName(){const d=new Date(),p=n=>String(n).padStart(2,'0');
   return `Partie du ${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;}
 function fmtDate(ts){if(!ts)return '—';const d=new Date(ts),p=n=>String(n).padStart(2,'0');
@@ -415,33 +378,22 @@ function fmtDate(ts){if(!ts)return '—';const d=new Date(ts),p=n=>String(n).pad
 function fmtDur(ms){ms=Math.max(0,ms||0);const s=Math.floor(ms/1000),m=Math.floor(s/60);
   return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
 
-/* ---------- distributeur (mélangeur) ----------
-   Ne distribue jamais un joueur éliminé (score > limite) tant qu'il reste des survivants. */
-function dealerPool(){const lim=RULES().limit;const pool=state.players.filter(p=>(state.scores[p]||0)<=lim);return pool.length?pool:state.players.slice();}
-function pickDealer(){const list=dealerPool();
+/* ---------- distributeur (mélangeur) ---------- */
+function pickDealer(){
+  const pool=state.players.filter(p=>(state.scores[p]||0)<=LIMITE);
+  const list=pool.length?pool:state.players;
   if(!list.length){state.dealer=null;return;}
   if(list.length===1){state.dealer=list[0];return;}
   let n;do{n=list[Math.floor(Math.random()*list.length)];}while(n===state.dealer); // évite de retomber sur le même
   state.dealer=n;}
-function ensureDealer(){if(!state.dealer||!state.players.includes(state.dealer)||(state.scores[state.dealer]||0)>RULES().limit)pickDealer();}
-function advanceDealer(){const list=dealerPool();if(!list.length){state.dealer=null;return;}
-  let i=list.indexOf(state.dealer);i=(i+1)%list.length;state.dealer=list[i];}
+function ensureDealer(){if(!state.dealer||!state.players.includes(state.dealer)||(state.scores[state.dealer]||0)>LIMITE)pickDealer();}
+function advanceDealer(){if(!state.players.length){state.dealer=null;return;}
+  let i=state.players.indexOf(state.dealer);i=(i+1)%state.players.length;state.dealer=state.players[i];}
 function rerollDealer(){if(!state.players.length||state.finished)return;
   pickDealer();logEvent('bonus',`🃏 ${state.dealer} distribue`);speak(`${state.dealer} distribue`);save();render();}
 
-/* ---------- règles paramétrables ---------- */
-function defaultRules(){return{limit:200,asaf:30,paliers:true,yanivZero:true};}
-function RULES(){const r=state.rules||{};return{
-  limit:Number.isFinite(r.limit)?r.limit:200,
-  asaf:Number.isFinite(r.asaf)?r.asaf:30,
-  paliers:r.paliers!==false,
-  yanivZero:r.yanivZero!==false};}
-
-/* ---------- palier -50 ----------
-   Paliers = tous les multiples de 50 jusqu'à la limite INCLUSE (50,100,150,200…).
-   Atterrir pile sur la limite (200) déclenche donc −50 (→150) ; seul un dépassement (201+) fait perdre. */
-function isPalier(cum){const R=RULES();return R.paliers&&cum>0&&cum%50===0&&cum<=R.limit;}
-function nextPalier(score){const lim=RULES().limit;const next=Math.floor(score/50)*50+50;return next<=lim?{target:next,remaining:next-score}:null;}
+/* ---------- palier -50 ---------- */
+function nextPalier(score){const P=[50,100,150,200];for(const t of P){if(score<t)return{target:t,remaining:t-score};}return null;}
 
 /* ---------- annonce vocale (voix féminine, débit posé) ---------- */
 let autoVoice=null;      // meilleure voix féminine détectée automatiquement
@@ -495,14 +447,12 @@ function announceRoundEnd(){const arr=Object.entries(state.scores).sort((a,b)=>a
   if(state.dealer)txt+=` ${state.dealer}, à toi de distribuer.`;
   speak(txt);}
 
-/* ---------- fin de partie ----------
-   Élimination progressive : dépasser la limite ÉLIMINE le joueur, mais la partie continue.
-   Elle ne s'achève que lorsqu'il ne reste plus qu'UN seul survivant (les autres éliminés). */
-function survivors(){const lim=RULES().limit;return state.players.filter(p=>(state.scores[p]||0)<=lim);}
-function isGameOver(){if(state.players.length<2)return false;
-  return state.players.some(p=>(state.scores[p]||0)>RULES().limit) && survivors().length<=1;}
+/* ---------- fin de partie ---------- */
 function checkEnd(){if(state.finished)return false;
-  if(isGameOver()){
+  const busted=state.players.some(p=>(state.scores[p]||0)>LIMITE);
+  if(!busted)return false;
+  const survivors=state.players.filter(p=>(state.scores[p]||0)<=LIMITE);
+  if(survivors.length<=1){
     state.finished=true;state.endedAt=Date.now();
     const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
     logEvent('bonus',`🏆 Partie terminée — ${arr[0][0]} gagne`);
@@ -510,28 +460,8 @@ function checkEnd(){if(state.finished)return false;
   }
   return false;}
 function announceEnd(){const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);if(!arr.length)return;
-  const losers=arr.filter(([n,s])=>s>RULES().limit).map(x=>x[0]);
-  speak(`Partie terminée. ${arr[0][0]} gagne avec ${arr[0][1]} points. ${losers.join(' et ')} a dépassé ${RULES().limit} et a perdu.`);}
-
-/* ---------- haptique + confettis ---------- */
-function buzz(pat){try{if(navigator.vibrate)navigator.vibrate(pat);}catch(e){}}
-function confetti(){try{
-  const cv=document.createElement('canvas');cv.style.cssText='position:fixed;inset:0;z-index:300;pointer-events:none';
-  const ctx=cv.getContext('2d');const W=cv.width=window.innerWidth,H=cv.height=window.innerHeight;
-  const cols=['#e9c886','#2fd39b','#6cb7ff','#ff7ad9','#ffa657','#ffffff'];
-  const parts=[];for(let i=0;i<130;i++)parts.push({x:W/2,y:H*0.28,vx:(Math.random()-0.5)*13,vy:Math.random()*-13-4,g:0.3+Math.random()*0.25,s:6+Math.random()*7,c:cols[i%cols.length],r:Math.random()*6,vr:(Math.random()-0.5)*0.4});
-  document.body.appendChild(cv);let t=0;
-  (function frame(){t++;ctx.clearRect(0,0,W,H);parts.forEach(p=>{p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
-    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6);ctx.restore();});
-    if(t<130)requestAnimationFrame(frame);else cv.remove();})();
-}catch(e){}}
-function installMeta(){try{
-  const icon="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='104' fill='#0a0c0b'/><text x='256' y='372' font-size='320' text-anchor='middle' fill='#e9c886' font-family='Georgia,serif'>♠</text></svg>");
-  const man={name:'Yaniv Club',short_name:'Yaniv',display:'standalone',background_color:'#0a0c0b',theme_color:'#0a0c0b',start_url:'.',icons:[{src:icon,sizes:'512x512',type:'image/svg+xml',purpose:'any'}]};
-  const url=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));
-  const l=document.createElement('link');l.rel='manifest';l.href=url;document.head.appendChild(l);
-  const a=document.createElement('link');a.rel='apple-touch-icon';a.href=icon;document.head.appendChild(a);
-}catch(e){}}
+  const losers=arr.filter(([n,s])=>s>LIMITE).map(x=>x[0]);
+  speak(`Partie terminée. ${arr[0][0]} gagne avec ${arr[0][1]} points. ${losers.join(' et ')} a dépassé 200 et a perdu.`);}
 
 /* ---------- timer ---------- */
 function updateTimer(){const el=document.getElementById('timer');if(!el)return;
@@ -546,7 +476,7 @@ function buildSeries(){const series={};state.players.forEach(p=>series[p]=[0]);
   state.history.forEach(round=>{state.players.forEach(p=>{const c=round[p];
     if(c){run[p]+=c.score;if(c.bonus)run[p]-=50;}series[p].push(run[p]);});});
   return series;}
-/* ---------- détail Yaniv / Asaf / Palier par manche ---------- */
+/* ---------- détail Yaniv / Asaf / Bonus par manche ---------- */
 function roundDetailsHTML(){
   if(!state.history.length)return '';
   const rows=state.history.map((round,i)=>{
@@ -554,7 +484,7 @@ function roundDetailsHTML(){
       const c=round[p];if(!c)return null;
       const tags=[];
       if(c.yaniv)tags.push('🎖️ Yaniv');
-      if(c.asaf)tags.push('⚔️ Asaf (+'+RULES().asaf+')');
+      if(c.asaf)tags.push('⚔️ Asaf (+30)');
       if(c.bonus)tags.push('⤵️ Palier (−50)');
       if(!tags.length)return null;
       return `<b style="color:var(--ink)">${escapeHtml(p)}</b> ${tags.join(' · ')}`;
@@ -564,16 +494,17 @@ function roundDetailsHTML(){
   }).filter(Boolean).join('');
   return rows? `<h2 style="margin-top:20px">🎖️⚔️⤵️ Détail par manche</h2>${rows}` : '';
 }
+
+/* ---------- graphique (trajectoire des scores) ---------- */
 function chartSVG(){
   const series=buildSeries(),names=state.players,rounds=state.history.length;
-  const lim=RULES().limit;
   const W=560,H=260,PL=40,PR=16,PT=16,PB=36;
-  let maxV=lim;names.forEach(p=>series[p].forEach(v=>{if(v>maxV)maxV=v;}));maxV+=20;
+  let maxV=200;names.forEach(p=>series[p].forEach(v=>{if(v>maxV)maxV=v;}));maxV+=20;
   const nx=Math.max(1,rounds);
   const X=i=>PL+(i*(W-PL-PR)/nx),Y=v=>PT+(H-PT-PB)*(1-(v/maxV));
   let g='';
-  [50,100,150].forEach(t=>{if(t<maxV&&t<lim)g+=`<line x1="${PL}" y1="${Y(t).toFixed(1)}" x2="${W-PR}" y2="${Y(t).toFixed(1)}" stroke="rgba(233,200,134,.12)"/><text x="${PL-6}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end" fill="#9b998b" font-size="10" font-family="monospace">${t}</text>`;});
-  g+=`<line x1="${PL}" y1="${Y(lim).toFixed(1)}" x2="${W-PR}" y2="${Y(lim).toFixed(1)}" stroke="rgba(228,106,106,.6)" stroke-dasharray="5 4"/><text x="${W-PR}" y="${(Y(lim)-5).toFixed(1)}" text-anchor="end" fill="#e46a6a" font-size="10" font-family="monospace">${lim} · défaite</text>`;
+  [50,100,150,200].forEach(t=>{if(t<maxV)g+=`<line x1="${PL}" y1="${Y(t).toFixed(1)}" x2="${W-PR}" y2="${Y(t).toFixed(1)}" stroke="rgba(233,200,134,.12)"/><text x="${PL-6}" y="${(Y(t)+4).toFixed(1)}" text-anchor="end" fill="#9b998b" font-size="10" font-family="monospace">${t}</text>`;});
+  g+=`<line x1="${PL}" y1="${Y(200).toFixed(1)}" x2="${W-PR}" y2="${Y(200).toFixed(1)}" stroke="rgba(228,106,106,.6)" stroke-dasharray="5 4"/><text x="${W-PR}" y="${(Y(200)-5).toFixed(1)}" text-anchor="end" fill="#e46a6a" font-size="10" font-family="monospace">200 · défaite</text>`;
   // graduation en abscisse : numéro de manche (on limite le nombre d'étiquettes si beaucoup de manches)
   if(rounds>0){
     const step=Math.max(1,Math.ceil(rounds/14));
@@ -593,11 +524,11 @@ function chartSVG(){
 function renderReport(){
   const arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);let html='';
   if(state.finished&&arr.length){
-    const losers=arr.filter(([n,s])=>s>RULES().limit).map(x=>x[0]);
+    const losers=arr.filter(([n,s])=>s>LIMITE).map(x=>x[0]);
     html+=`<div class="bilan"><div class="crown">🏆</div>
       <div class="win">${escapeHtml(arr[0][0])} remporte la partie</div>
       <div class="muted" style="font-family:var(--mono);margin-top:2px">${arr[0][1]} pts</div>
-      ${losers.length?`<div class="lose">💀 ${losers.map(escapeHtml).join(', ')} a dépassé ${RULES().limit} — éliminé</div>`:''}
+      ${losers.length?`<div class="lose">💀 ${losers.map(escapeHtml).join(', ')} a dépassé 200 — éliminé</div>`:''}
       <div class="dur">⏱ Durée : ${fmtDur((state.endedAt||0)-(state.startedAt||state.endedAt||0))} · ${state.history.length} manches</div></div>`;
   }else{
     html+=`<div style="font-family:var(--serif);font-size:22px;color:var(--gold);text-align:center;margin-bottom:4px">📈 Rapport</div>
@@ -613,87 +544,6 @@ function renderReport(){
   document.getElementById('reportBody').innerHTML=html;}
 function openReport(){renderReport();document.getElementById('reportModal').classList.add('open');}
 function closeReport(){document.getElementById('reportModal').classList.remove('open');}
-
-/* ---------- palmarès du groupe (toutes parties) ---------- */
-function computePalmares(){const map={};
-  Object.values(library.games).forEach(g=>{const st=g&&g.state;if(!st||!Array.isArray(st.players))return;
-    const lim=(st.rules&&Number.isFinite(st.rules.limit))?st.rules.limit:200;
-    const finished=!!st.finished;
-    const arr=Object.entries(st.scores||{}).sort((a,b)=>a[1]-b[1]);
-    const winner=(finished&&arr.length)?arr[0][0]:null;
-    st.players.forEach(p=>{const k=(p||'').trim().toLowerCase();if(!k)return;
-      if(!map[k])map[k]={name:p,parties:0,fin:0,wins:0,losses:0,sum:0};
-      map[k].parties++;
-      if(finished){map[k].fin++;const sc=(st.scores&&st.scores[p])||0;map[k].sum+=sc;
-        if(p===winner)map[k].wins++;if(sc>lim)map[k].losses++;}});});
-  return Object.values(map).sort((a,b)=>b.wins-a.wins||a.parties-b.parties||a.name.localeCompare(b.name));}
-function openPalmares(){const rows=computePalmares();
-  let html='<div style="font-family:var(--serif);font-size:24px;color:var(--gold);text-align:center;margin-bottom:10px">🏆 Palmarès du groupe</div>';
-  if(!rows.length)html+='<div class="empty">Aucune partie enregistrée pour l\'instant.</div>';
-  else{html+='<div class="tablewrap"><table><thead><tr><th>#</th><th>Joueur</th><th>🏆</th><th>💀</th><th>Parties</th><th>Moy.</th></tr></thead><tbody>'+
-    rows.map((r,i)=>`<tr><td>${['🥇','🥈','🥉'][i]||('#'+(i+1))}</td><td>${escapeHtml(r.name)}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.parties}</td><td>${r.fin?Math.round(r.sum/r.fin):'—'}</td></tr>`).join('')+
-    '</tbody></table></div><div class="muted" style="font-size:12px;margin-top:10px">🏆 victoires · 💀 dépassements de la limite · Moy. = score final moyen sur les parties terminées.</div>';}
-  document.getElementById('palmaresBody').innerHTML=html;
-  document.getElementById('palmaresModal').classList.add('open');}
-function closePalmares(){document.getElementById('palmaresModal').classList.remove('open');}
-
-/* ---------- règles ---------- */
-function openRules(){const R=RULES();
-  document.getElementById('rLimit').value=R.limit;
-  document.getElementById('rAsaf').value=R.asaf;
-  document.getElementById('rPal').checked=R.paliers;
-  document.getElementById('rYz').checked=R.yanivZero;
-  document.getElementById('rulesModal').classList.add('open');}
-function closeRules(){document.getElementById('rulesModal').classList.remove('open');}
-function saveRules(){let lim=parseInt(document.getElementById('rLimit').value,10);if(isNaN(lim)||lim<10)lim=200;
-  let as=parseInt(document.getElementById('rAsaf').value,10);if(isNaN(as)||as<0)as=30;
-  state.rules={limit:lim,asaf:as,paliers:document.getElementById('rPal').checked,yanivZero:document.getElementById('rYz').checked};
-  recompute();
-  const over=isGameOver();
-  state.finished=over;if(!over)state.endedAt=null;else if(!state.endedAt)state.endedAt=Date.now();
-  save();render();closeRules();}
-
-/* ---------- sauvegarde / partage ---------- */
-function download(fn,txt){const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=fn;
-  document.body.appendChild(a);a.click();setTimeout(()=>{try{URL.revokeObjectURL(a.href);}catch(e){}a.remove();},50);}
-function exportAll(){download('yaniv-sauvegarde.json',JSON.stringify(library));uiAlert("Sauvegarde téléchargée (yaniv-sauvegarde.json).");}
-function importFileTrigger(){document.getElementById('importFile').click();}
-function importFile(ev){const f=ev.target.files&&ev.target.files[0];if(!f)return;const rd=new FileReader();
-  rd.onload=()=>{try{mergeLibrary(JSON.parse(rd.result));}catch(e){uiAlert("Fichier illisible.");}ev.target.value='';};rd.readAsText(f);}
-function mergeLibrary(data){let games=null;
-  if(data&&data.games&&typeof data.games==='object')games=Object.values(data.games);
-  else if(data&&data.players)games=[{name:data.name||'Partie importée',state:data}];
-  else if(data&&data.state)games=[data];
-  if(!games||!games.length){uiAlert("Aucune partie trouvée dans ce fichier.");return;}
-  let n=0;games.forEach(g=>{if(!g||!g.state)return;const id=uid();
-    library.games[id]={id,name:g.name||'Partie importée',createdAt:g.createdAt||Date.now(),updatedAt:g.updatedAt||Date.now(),state:sanitizeState(g.state)};n++;});
-  persist();render();uiAlert(n+' partie(s) importée(s).');}
-function b64enc(s){return btoa(unescape(encodeURIComponent(s)));}
-function b64dec(s){return decodeURIComponent(escape(atob(s)));}
-function gameLink(g){const base=location.href.split('#')[0];return base+'#g='+b64enc(JSON.stringify({name:g.name,state:g.state}));}
-// Partager la partie en cours : menu natif (WhatsApp/SMS…) si dispo, sinon copie du lien
-function shareGame(){const g=library.games[library.currentId];if(!g){uiAlert("Aucune partie en cours.");return;}
-  const url=gameLink(g);
-  if(navigator.share){navigator.share({title:'Yaniv — '+g.name,text:`Rejoins la partie « ${g.name} »`,url}).catch(function(){});return;}
-  if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(url).then(
-      function(){uiAlert("Lien copié ✓\nColle-le dans un message (WhatsApp, SMS…). La personne ouvre le lien et la partie s'importe toute seule.");},
-      function(){uiPrompt('Copie ce lien :',url);});
-    return;}
-  uiPrompt('Copie ce lien :',url);}
-function extractCode(s){s=(s||'').trim();const h=s.indexOf('#g=');if(h>=0)return s.slice(h+3);if(s.indexOf('YANIV1:')===0)return s.slice(7);return s;}
-function importPayload(code){try{const o=JSON.parse(b64dec(extractCode(code)));if(!o||!o.state)throw 0;const id=uid();
-    library.games[id]={id,name:o.name||'Partie reçue',createdAt:Date.now(),updatedAt:Date.now(),state:sanitizeState(o.state)};
-    persist();activate(id);goTable();uiAlert('Partie « '+(o.name||'reçue')+' » importée ✓');return true;
-  }catch(e){uiAlert("Lien ou code invalide.");return false;}}
-function importCode(){uiPrompt('Colle le lien (ou code) reçu :','').then(function(code){if(code)importPayload(code);});}
-// Au démarrage : si l'URL contient une partie partagée (#g=…), proposer de l'importer
-function checkSharedLink(){try{const h=location.hash||'';if(h.indexOf('#g=')!==0)return;const code=h.slice(3);
-    const o=JSON.parse(b64dec(code));if(!o||!o.state)return;
-    try{history.replaceState(null,'',location.pathname+location.search);}catch(e){location.hash='';}
-    uiConfirm(`Importer la partie « ${o.name||'reçue'} » reçue par lien ?`).then(function(ok){if(ok)importPayload('#g='+code);});
-  }catch(e){}}
 
 /* ---------- persistance ---------- */
 function persist(){const g=library.games[library.currentId];if(g){g.state=state;g.updatedAt=Date.now();}
@@ -712,7 +562,7 @@ function loadLibrary(){
   if(!library.currentId||!library.games[library.currentId]){
     const ids=Object.keys(library.games);
     if(ids.length){ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));library.currentId=ids[0];}
-    else{library.currentId=null;state=blankState();} // aucune partie vide créée/persistée d'office → lobby propre
+    else{library.currentId=null;state=blankState();} // aucune partie vide créée/persistée automatiquement
   }
   if(library.currentId)activate(library.currentId);
   persist();
@@ -745,7 +595,7 @@ function deleteGame(id){const g=library.games[id];if(!g)return Promise.resolve(f
     if(!ok)return false;delete library.games[id];
     if(library.currentId===id){const ids=Object.keys(library.games);
       if(ids.length){ids.sort((a,b)=>(library.games[b].updatedAt||0)-(library.games[a].updatedAt||0));activate(ids[0]);}
-      else{library.currentId=null;state=blankState();}}
+      else createGame(defaultName(),false);}
     persist();render();return true;});}
 function deleteCurrent(){deleteGame(library.currentId).then(done=>{if(done&&curView==='table')showView('lobby');});}
 function renameGame(id){const g=library.games[id];if(!g)return;
@@ -766,7 +616,7 @@ function removePlayer(name){if(!state.players.includes(name))return;
   uiConfirm(msg).then(ok=>{if(!ok)return;
     state.players=state.players.filter(p=>p!==name);delete state.scores[name];delete state.stats[name];
     state.history.forEach(r=>{delete r[name];});recompute();logEvent('asaf',`🗑️ ${name} retiré de la partie`);
-    if(!state.players.length){state.dealer=null;state.finished=false;state.startedAt=null;state.endedAt=null;state.history=[];}
+    if(!state.players.length){state.dealer=null;state.finished=false;state.startedAt=null;state.endedAt=null;}
     save();render();});}
 
 /* ---------- rendu ---------- */
@@ -794,16 +644,15 @@ function render(){
   document.getElementById('dealerName').textContent = state.players.length ? (state.dealer||'—') : '—';
 
   // Classement
-  const R=RULES();
   let arr=Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
   const mn=arr.length?arr[0][1]:null, mx=arr.length?arr[arr.length-1][1]:null, spread=arr.length>1&&mn!==mx;
   document.getElementById('ranking').innerHTML = arr.length? arr.map((x,i)=>{
     const name=x[0], sc=x[1];
-    const lead=spread&&sc===mn, last=spread&&sc===mx, dead=sc>R.limit;
+    const lead=spread&&sc===mn, last=spread&&sc===mx, dead=sc>LIMITE;
     const medal=['🥇','🥈','🥉'][i]||('#'+(i+1));
-    const np=R.paliers?nextPalier(sc):null;
-    const hint = dead ? `💀 a dépassé ${R.limit} — éliminé`
-      : (!R.paliers ? '' : (np ? `🎯 −50 dans ${np.remaining} pt${np.remaining>1?'s':''} (palier ${np.target})` : ''));
+    const np=nextPalier(sc);
+    const hint = dead ? '💀 a dépassé 200 — éliminé'
+      : (np ? `🎯 −50 dans ${np.remaining} pt${np.remaining>1?'s':''} (palier ${np.target})` : '— plus de palier −50');
     const isDealer = (!state.finished && name===state.dealer);
     return `<div class="lb-row ${lead?'lead':''} ${last?'last':''} ${dead?'dead':''}">
       <div class="rk">${medal}</div>
@@ -824,7 +673,7 @@ function render(){
   // Historique
   document.getElementById('historyHeader').innerHTML='<th>#</th>'+state.players.map(p=>`<th>${escapeHtml(p)}</th>`).join('');
   document.getElementById('history').innerHTML = state.history.length? state.history.map((h,i)=>
-    `<tr onclick="openRound(${i})" style="cursor:pointer" title="Toucher pour modifier ou supprimer cette manche"><td><b>R${i+1}</b> ✏️</td>${state.players.map(p=>{let c=h[p];if(!c)return '<td>-</td>';
+    `<tr><td><b>R${i+1}</b></td>${state.players.map(p=>{let c=h[p];if(!c)return '<td>-</td>';
       let m=String(c.score);if(c.yaniv)m+=' 🎖️';if(c.asaf)m+=' ⚔️';if(c.bonus)m+=' ⤵️';return `<td>${escapeHtml(m)}</td>`;}).join('')}</tr>`
     ).join('') : `<tr><td colspan="${state.players.length+1}" class="muted">Aucune manche</td></tr>`;
 
@@ -858,54 +707,31 @@ document.getElementById('players').addEventListener('click',e=>{
 document.getElementById('playerName').addEventListener('keydown',e=>{if(e.key==='Enter')addPlayer();});
 document.getElementById('uiInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();uiOk();}});
 
-/* ---------- logique de jeu ----------
-   Le palier −50 est DÉRIVÉ ici (pas juste lu) : indispensable pour que l'édition/suppression
-   d'une manche recalcule correctement les paliers des manches suivantes. */
+/* ---------- logique de jeu ---------- */
 function recompute(){
-  const R=RULES();
   for(let p of state.players)state.scores[p]=0;
   state.players.forEach(p=>state.stats[p]={yaniv:0,asaf:0,bonus:0});
-  for(let round of state.history){for(let p of state.players){const c=round[p];if(!c)continue;
-    state.scores[p]+=c.score;
-    const bonus = c.score>0 && isPalier(state.scores[p]);
-    c.bonus=bonus; // recalculé pour l'affichage/historique
-    if(bonus){state.scores[p]-=50;state.stats[p].bonus++;}
-    if(c.yaniv)state.stats[p].yaniv++;
-    if(c.asaf)state.stats[p].asaf++;}}
+  for(let round of state.history){for(let p of state.players){if(!round[p])continue;
+    state.scores[p]+=round[p].score;
+    if(round[p].bonus){state.scores[p]-=50;state.stats[p].bonus++;}
+    if(round[p].yaniv)state.stats[p].yaniv++;
+    if(round[p].asaf)state.stats[p].asaf++;}}
 }
 
 /* ---------- feuille de manche (keypad) ---------- */
-let draft=[], sel=0, editIndex=null, draftPlayers=[];
-// cumul AVANT une manche donnée (pour projeter correctement en édition)
-function scoresBefore(idx){const sc={};state.players.forEach(p=>sc[p]=0);
-  for(let k=0;k<idx&&k<state.history.length;k++){const r=state.history[k];
-    state.players.forEach(p=>{const c=r[p];if(c){sc[p]+=c.score;if(c.bonus)sc[p]-=50;}});}
-  return sc;}
-function draftBase(){return editIndex!=null?scoresBefore(editIndex):state.scores;}
-function openRound(idx){
+let draft=[], sel=0, draftPlayers=[];
+function openRound(){
   if(!state.players.length){uiAlert("Ajoute au moins un joueur avant de saisir une manche.");return;}
-  editIndex = (typeof idx==='number') ? idx : null;
-  if(editIndex===null && state.finished){uiAlert("Partie terminée. Corrige une manche (onglet Historique), lance une revanche, ou annule la dernière.");return;}
+  if(state.finished){uiAlert("Partie terminée. Lance une revanche ou annule la dernière manche.");return;}
   ensureDealer();
-  const R=RULES();
-  if(editIndex!=null){
-    draftPlayers=state.players.slice(); // édition : tous les joueurs de la manche corrigée
-    const r=state.history[editIndex]||{};
-    draft=draftPlayers.map(p=>{const c=r[p];if(!c)return{pts:'',yaniv:false,asaf:false};
-      let raw=(c.score||0)-(c.asaf?R.asaf:0);if(raw<0)raw=0;
-      return{pts:String(raw),yaniv:!!c.yaniv,asaf:!!c.asaf};});
-    document.getElementById('roundTitle').textContent='Modifier la manche '+(editIndex+1);
-    document.getElementById('delRoundBtn').style.display='';
-  }else{
-    draftPlayers=survivors();if(!draftPlayers.length)draftPlayers=state.players.slice(); // nouvelle manche : seuls les survivants jouent
-    draft=draftPlayers.map(()=>({pts:'',yaniv:false,asaf:false}));
-    document.getElementById('roundTitle').textContent='Manche '+(state.history.length+1);
-    document.getElementById('delRoundBtn').style.display='none';
-  }
-  sel=0;renderDraft();document.getElementById('roundSheet').classList.add('open');
-  // pas d'annonce ici : « qui distribue » est dit APRÈS la validation des points
+  draftPlayers=state.players.filter(p=>(state.scores[p]||0)<=LIMITE);
+  if(!draftPlayers.length)draftPlayers=state.players.slice();
+  draft=draftPlayers.map(()=>({pts:'',yaniv:false,asaf:false}));sel=0;
+  document.getElementById('roundTitle').textContent='Manche '+(state.history.length+1);
+  renderDraft();document.getElementById('roundSheet').classList.add('open');
+  // pas d'annonce ici : « qui distribue » est dit APRÈS la validation des points (voir announceRoundEnd)
 }
-function closeRound(){editIndex=null;document.getElementById('roundSheet').classList.remove('open');}
+function closeRound(){document.getElementById('roundSheet').classList.remove('open');}
 function selectRow(i){sel=i;renderDraft();}
 function padKey(k){const d=draft[sel];if(!d)return;
   if(k==='C')d.pts='';
@@ -913,19 +739,18 @@ function padKey(k){const d=draft[sel];if(!d)return;
   else{if(d.pts.length>=3)return;if(d.pts==='0')d.pts='';d.pts=(d.pts+k);}
   renderDraft();}
 function toggleChip(i,kind){const d=draft[i];if(!d)return;
-  if(kind==='y'){d.yaniv=!d.yaniv;if(d.yaniv){if(RULES().yanivZero)d.pts='0';d.asaf=false;}}
+  if(kind==='y'){d.yaniv=!d.yaniv;if(d.yaniv){d.pts='0';d.asaf=false;}}
   else{d.asaf=!d.asaf;if(d.asaf)d.yaniv=false;}
   sel=i;renderDraft();}
 function renderDraft(){
-  const R=RULES(),base=draftBase();
   document.getElementById('draftRows').innerHTML=draftPlayers.map((p,i)=>{
-    const d=draft[i];const raw=parseInt(d.pts||'0',10)||0;const score=d.asaf?raw+R.asaf:raw;
-    const b=base[p]||0;const fut=b+score;const bonus=score>0&&isPalier(fut);
+    const d=draft[i];const raw=parseInt(d.pts||'0',10)||0;const score=d.asaf?raw+30:raw;
+    const fut=(state.scores[p]||0)+score;const bonus=score>0&&(fut===50||fut===100||fut===150||fut===200);
     const shown=d.pts===''?'0':d.pts;
     return `<div class="dr ${i===sel?'sel':''}" onclick="selectRow(${i})">
       <div style="min-width:0;flex:1">
         <div class="dnm">${escapeHtml(p)}</div>
-        <div class="proj">→ ${b} + ${score}${bonus?' −50':''} = <b style="color:${bonus?'var(--gold)':'var(--ink)'}">${fut-(bonus?50:0)}</b></div>
+        <div class="proj">→ ${(state.scores[p]||0)} + ${score}${bonus?' −50':''} = <b style="color:${bonus?'var(--gold)':'var(--ink)'}">${fut-(bonus?50:0)}</b></div>
       </div>
       <div class="chips">
         <button class="chip y ${d.yaniv?'on':''}" onclick="event.stopPropagation();toggleChip(${i},'y')">🎖️</button>
@@ -936,38 +761,26 @@ function renderDraft(){
   }).join('');
 }
 function commitRound(){
-  const R=RULES(),base=draftBase();let round={},hadBonus=false;
+  let round={};
   draftPlayers.forEach((p,i)=>{const d=draft[i];let pts=parseInt(d.pts||'0',10);if(isNaN(pts))pts=0;
-    const asaf=!!d.asaf,yan=!!d.yaniv;const score=asaf?pts+R.asaf:pts;
-    const fut=(base[p]||0)+score;const bonus=score>0&&isPalier(fut);
-    if(bonus)hadBonus=true;
+    const asaf=!!d.asaf,yan=!!d.yaniv;const score=asaf?pts+30:pts;
+    const fut=(state.scores[p]||0)+score;const bonus=score>0&&(fut===50||fut===100||fut===150||fut===200);
     round[p]={score,asaf,yaniv:yan,bonus};
     if(yan)logEvent('yaniv',`🎖️ ${p} annonce Yaniv`);
-    if(asaf)logEvent('asaf',`⚔️ ${p} subit un Asaf (+${R.asaf})`);
+    if(asaf)logEvent('asaf',`⚔️ ${p} subit un Asaf (+30)`);
     if(bonus)logEvent('bonus',`⤵️ ${p} valide un palier (−50)`);});
-  const isEdit=editIndex!=null;
-  if(isEdit){state.history[editIndex]=round;}
-  else{if(!state.startedAt)state.startedAt=Date.now();state.history.push(round);}
-  recompute();
-  // ré-évaluer la fin dans les deux sens (utile en édition) : fin quand il ne reste qu'un survivant
-  const over=isGameOver();let endedNow=false;
-  if(over&&!state.finished){state.finished=true;state.endedAt=Date.now();
-    const a=Object.entries(state.scores).sort((x,y)=>x[1]-y[1]);logEvent('bonus',`🏆 Partie terminée — ${a[0][0]} gagne`);endedNow=true;}
-  else if(!over&&state.finished){state.finished=false;state.endedAt=null;}
-  if(!isEdit&&!state.finished){advanceDealer();logEvent('bonus',`🃏 ${state.dealer} distribue la prochaine`);} // aléatoire au départ, puis rotation dans l'ordre (en sautant les éliminés)
-  buzz(endedNow?[80,50,80,50,160]:(hadBonus?[20,40,20]:20));
-  editIndex=null;
+  if(!state.startedAt)state.startedAt=Date.now();
+  state.history.push(round);recompute();
+  const ended=checkEnd();
+  if(!ended){ pickDealer(); logEvent('bonus',`🃏 ${state.dealer} distribue la prochaine`); } // tirage ALÉATOIRE à chaque fin de round
   save();render();closeRound();switchTab('rank');
-  if(endedNow){announceEnd();confetti();openReport();}
-  else if(!isEdit)announceRoundEnd();
+  if(ended){announceEnd();openReport();}
+  else announceRoundEnd();
 }
-function deleteEditedRound(){if(editIndex==null)return;const idx=editIndex;
-  uiConfirm(`Supprimer la manche ${idx+1} ?`).then(ok=>{if(!ok)return;
-    state.history.splice(idx,1);recompute();
-    if(!isGameOver()){state.finished=false;state.endedAt=null;}
-    editIndex=null;save();render();closeRound();switchTab('rank');});}
 function undoRound(){if(!state.history.length)return;state.history.pop();logEvent('asaf','↩️ Manche annulée');recompute();
-  if(!isGameOver()){state.finished=false;state.endedAt=null;}
+  const busted=state.players.some(p=>(state.scores[p]||0)>LIMITE);
+  const survivors=state.players.filter(p=>(state.scores[p]||0)<=LIMITE);
+  if(!(busted&&survivors.length<=1)){state.finished=false;state.endedAt=null;}
   save();render();}
 
 /* ---------- revanche ---------- */
@@ -978,14 +791,12 @@ function rematch(){const players=state.players.slice();persist();
   if(state.dealer)speak(`Revanche. ${state.dealer} distribue`);}
 
 /* ---------- démarrage ---------- */
-installMeta();
 loadLibrary();
 setSpeakBtn();
 populateVoiceSelect();
 timerInt=setInterval(updateTimer,1000);
 showView( (state.players.length>0 || state.history.length>0) ? 'table' : 'lobby' );
 if(curView==='table') switchTab('rank');
-checkSharedLink(); // importe une partie reçue par lien (#g=…)
 </script>
 </body>
 </html>

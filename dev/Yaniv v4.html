@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Yaniv</title>
+<style>
+body{font-family:-apple-system,sans-serif;background:#f2f2f7;margin:0;padding:15px;transition:0.3s} 
+.app{max-width:700px;margin:auto;background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+.row{display:flex;gap:8px;margin-bottom:12px}
+.row input{flex:1}
+.card{padding:12px;margin:10px 0;background:#fafafa;border-radius:10px}
+input,button{padding:12px;border-radius:8px;border:1px solid #ccc;font-size:16px}
+button{background:#007aff;color:#fff;border:none;font-weight:600;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin:10px 0}
+th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
+th{background:#f2f2f7}
+.leader{background:#d4edda;font-weight:bold}
+.loser{background:#f8d7da}
+.event{padding:10px;border-radius:8px;margin:5px 0;font-size:14px;font-weight:500}
+.yaniv{background:#d1ecf1;color:#0c5460}
+.asaf{background:#f8d7da;color:#721c24}
+.bonus{background:#d4edda;color:#155724}
+.flex-input {display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px}
+.toggle-group {display:flex;gap:10px;align-items:center}
+.dark{background:#1c1c1e;color:#fff}
+.dark .app{background:#2c2c2e;color:#fff}
+.dark .card, .dark th{background:#3a3a3c}
+.dark th, .dark td{border-bottom:1px solid #48484a}
+</style>
+</head>
+<body>
+<div class='app'>
+<h1>🏆 Yaniv </h1>
+<div class='row'>
+    <input id='playerName' placeholder='Nom du joueur' maxlength='24'>
+    <button onclick='addPlayer()'>Ajouter</button>
+    <button onclick='toggleDark()'>🌙/☀️</button>
+</div>
+<div id='players' class='card'></div>
+
+<h2>Classement</h2>
+<table>
+    <thead><tr><th>Position / Joueur</th><th>Score Cumulé</th></tr></thead>
+    <tbody id='ranking'></tbody>
+</table>
+
+<h2>Saisie Manche</h2>
+<div id='roundInputs' class='card'></div>
+<div class='row'>
+    <button onclick='saveRound()' style="background:#34c759;flex:1">Enregistrer</button>
+    <button onclick='undoRound()' style="background:#ff9500">↩️ Annuler</button>
+</div>
+<div class='row' style="margin-top:10px">
+    <button onclick='newGame()' class='dark' style="flex:1">🗑️ Nouvelle partie</button>
+    <button onclick='exportCSV()' style="background:#8e8e93">📤 Export CSV</button>
+</div>
+
+<h2>Statistiques</h2>
+<div id='stats' class='card'></div>
+
+<h2>📋 Événements</h2>
+<div id='events'></div>
+
+<h2>📖 Historique des Rounds</h2>
+<table>
+    <thead><tr id="historyHeader"><th>Manche</th></tr></thead>
+    <tbody id='history'></tbody>
+</table>
+</div>
+
+<script>
+
+let state={players:[],scores:{},history:[],events:[],stats:{}};
+
+const RESERVED_NAMES = ['__proto__', 'constructor', 'prototype'];
+const MAX_EVENTS = 50;
+
+// ---------- Utilitaires ----------
+
+function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
+function csvEscape(field){
+    const str = String(field);
+    if(/[;"\n]/.test(str)){
+        return '"' + str.replace(/"/g, '""') + '"';
+    }
+    return str;
+}
+
+function logEvent(type, text){
+    state.events.unshift({type, text, timestamp: Date.now()});
+    if(state.events.length > MAX_EVENTS){
+        state.events.length = MAX_EVENTS;
+    }
+}
+
+// ---------- Persistance ----------
+
+function save(){
+    try{
+        localStorage.setItem('yaniv_pro_data', JSON.stringify(state));
+    }catch(err){
+        console.error('Erreur lors de la sauvegarde :', err);
+    }
+}
+
+function load(){
+    let s = localStorage.getItem('yaniv_pro_data');
+    if(s){
+        try{
+            const parsed = JSON.parse(s);
+            state = {
+                players: Array.isArray(parsed.players) ? parsed.players : [],
+                scores: (parsed.scores && typeof parsed.scores === 'object') ? parsed.scores : {},
+                history: Array.isArray(parsed.history) ? parsed.history : [],
+                events: Array.isArray(parsed.events) ? parsed.events : [],
+                stats: (parsed.stats && typeof parsed.stats === 'object') ? parsed.stats : {}
+            };
+        }catch(err){
+            console.error('Données sauvegardées corrompues :', err);
+            alert("Les données sauvegardées étaient corrompues. Une nouvelle partie a été démarrée.");
+            state = {players:[],scores:{},history:[],events:[],stats:{}};
+        }
+    }
+    render();
+}
+
+// ---------- Joueurs ----------
+
+function addPlayer(){
+    const input = document.getElementById('playerName');
+    let n = input.value.trim();
+    if(!n) return;
+
+    if(n.length > 24){
+        alert("Le nom du joueur ne doit pas dépasser 24 caractères.");
+        return;
+    }
+    if(RESERVED_NAMES.includes(n)){
+        alert("Ce nom n'est pas autorisé.");
+        return;
+    }
+    if(state.players.some(p => p.toLowerCase() === n.toLowerCase())){
+        alert(`"${n}" est déjà dans la partie.`);
+        return;
+    }
+
+    state.players.push(n);
+    state.scores[n]=0;
+    state.stats[n]={yaniv:0,asaf:0,bonus:0};
+    input.value='';
+    input.focus();
+    save();
+    render();
+}
+
+/**
+ * Supprime un joueur de la partie en cours.
+ * @param {string} name - Nom du joueur à supprimer.
+ */
+function removePlayer(name){
+    if(!state.players.includes(name)){
+        console.warn(`removePlayer: "${name}" introuvable dans state.players`);
+        return;
+    }
+
+    if(state.players.length <= 1){
+        alert("Impossible de supprimer le dernier joueur.");
+        return;
+    }
+
+    if(!confirm(`Supprimer "${name}" de la partie ?`)){
+        return;
+    }
+
+    state.players = state.players.filter(p => p !== name);
+    delete state.scores[name];
+    delete state.stats[name];
+    state.history.forEach(round => { delete round[name]; });
+
+    recompute();
+    logEvent('asaf', `🗑️ ${name} a été supprimé de la partie`);
+
+    save();
+    render();
+}
+
+function quickZero(index) {
+    const pts = document.getElementById('pts_' + index);
+    const y = document.getElementById('y_' + index);
+    const a = document.getElementById('a_' + index);
+    if(!pts || !y || !a) return;
+    pts.value = 0;
+    y.checked = true;
+    a.checked = false;
+}
+
+function filterNumericInput(event) {
+    if (!/[0-9]/.test(event.key) && event.key !== 'Backspace' && event.key !== 'Delete' && event.key !== 'Tab' && event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+        event.preventDefault();
+    }
+}
+
+// ---------- Rendu ----------
+
+function render(){
+    document.getElementById('players').innerHTML =
+    state.players.length
+    ? '<b>En jeu :</b><br>' +
+      state.players.map((p, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee">
+            <span>${escapeHtml(p)}</span>
+            <button type="button" class="remove-player-btn" data-index="${i}" style="background:#ff3b30;padding:6px 12px;font-size:14px">
+                ❌ Supprimer
+            </button>
+        </div>
+      `).join('')
+    : 'Aucun joueur';
+
+    // type="tel" + inputmode="numeric" force le vrai pavé numérique sur iPad
+    document.getElementById('roundInputs').innerHTML=state.players.map((p, i)=>`
+        <div class="flex-input">
+            <span style="font-weight:bold;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p)}</span>
+            <input type='tel' id='pts_${i}' value='' placeholder='0' inputmode='numeric' pattern='[0-9]*' onkeydown='filterNumericInput(event)' style="width:60px;text-align:center">
+            <div class="toggle-group">
+                <button type="button" class="quick-zero-btn" data-index="${i}" style="padding:6px 10px;font-size:12px;background:#ff9500">0</button>
+                <label><input type='checkbox' id='y_${i}'> 🎖️ Yaniv</label>
+                <label><input type='checkbox' id='a_${i}'> ⚔️ Asaf</label>
+            </div>
+        </div>
+    `).join('');
+
+    let scoresArr = Object.entries(state.scores).sort((a,b)=>a[1]-b[1]);
+    const minScore = scoresArr.length ? scoresArr[0][1] : null;
+    const maxScore = scoresArr.length ? scoresArr[scoresArr.length-1][1] : null;
+    const hasSpread = scoresArr.length > 1 && minScore !== maxScore;
+
+    document.getElementById('ranking').innerHTML=scoresArr.map((x,i)=>{
+        const isLeader = hasSpread && x[1] === minScore;
+        const isLoser = hasSpread && x[1] === maxScore;
+        return `
+        <tr class='${isLeader?'leader':''} ${isLoser?'loser':''}'>
+            <td>${['🥇','🥈','🥉'][i]||'👤'} ${escapeHtml(x[0])}</td>
+            <td><b>${x[1]} pts</b></td>
+        </tr>
+    `;
+    }).join('');
+
+    document.getElementById('events').innerHTML=state.events.slice(0,3).map(e=>`<div class='event ${e.type}'>${escapeHtml(e.text)}</div>`).join('');
+
+    document.getElementById('historyHeader').innerHTML = '<th>Manche</th>' + state.players.map(p => `<th>${escapeHtml(p)}</th>`).join('');
+
+    document.getElementById('history').innerHTML=state.history.map((h,i)=>`
+        <tr>
+            <td><b>R${i+1}</b></td>
+            ${state.players.map(p => {
+                let cell = h[p];
+                if(!cell) return '<td>-</td>';
+                let mark = String(cell.score);
+                if(cell.yaniv) mark += ' 🎖️';
+                if(cell.asaf) mark += ' ⚔️';
+                if(cell.bonus) mark += ' ⤵️';
+                return `<td>${escapeHtml(mark)}</td>`;
+            }).join('')}
+        </tr>
+    `).join('');
+
+    let st='';
+    for(let p of state.players){
+        let s=state.stats[p]||{yaniv:0,asaf:0,bonus:0};
+        st+=`<b>${escapeHtml(p)}</b> | Yaniv : ${s.yaniv||0} 🎖️ | Asaf : ${s.asaf||0} ⚔️ | Paliers -50 : ${s.bonus||0} ⤵️<br>`;
+    }
+    document.getElementById('stats').innerHTML=st || 'Aucune statistique';
+}
+
+// ---------- Délégation d'événements (sûre vis-à-vis des noms spéciaux) ----------
+
+document.getElementById('players').addEventListener('click', (e) => {
+    const btn = e.target.closest('.remove-player-btn');
+    if(!btn) return;
+    const idx = parseInt(btn.dataset.index, 10);
+    const name = state.players[idx];
+    if(name !== undefined) removePlayer(name);
+});
+
+document.getElementById('roundInputs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.quick-zero-btn');
+    if(!btn) return;
+    quickZero(parseInt(btn.dataset.index, 10));
+});
+
+document.getElementById('playerName').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') addPlayer();
+});
+
+// ---------- Logique de jeu ----------
+
+function recompute(){
+    for(let p of state.players) state.scores[p]=0;
+    state.players.forEach(p=>state.stats[p]={yaniv:0,asaf:0,bonus:0});
+    
+    for(let round of state.history){
+        for(let p of state.players){
+            if(!round[p]) continue; 
+            state.scores[p]+=round[p].score;
+            if(round[p].bonus){
+                state.scores[p]-=50;
+                state.stats[p].bonus++;
+            }
+            if(round[p].yaniv) state.stats[p].yaniv++;
+            if(round[p].asaf) state.stats[p].asaf++;
+        }
+    }
+}
+
+function saveRound(){
+    if(!state.players.length){
+        alert("Ajoutez au moins un joueur avant d'enregistrer une manche.");
+        return;
+    }
+
+    let round={};
+
+    state.players.forEach((p, i) => {
+        let ptsInput = document.getElementById('pts_'+i);
+        let pts = parseInt(ptsInput ? ptsInput.value : '', 10);
+        if(isNaN(pts)) pts = 0;
+
+        let asafEl = document.getElementById('a_'+i);
+        let yanEl = document.getElementById('y_'+i);
+        let asaf = asafEl ? asafEl.checked : false;
+        let yan = yanEl ? yanEl.checked : false;
+
+        let score=asaf?pts+30:pts;
+        let future=(state.scores[p]||0)+score;
+        let bonus = (future === 50 || future === 100 || future === 150);
+
+        round[p]={score,asaf,yaniv:yan,bonus};
+
+        if(yan) logEvent('yaniv', `🎖️ ${p} a annoncé Yaniv`);
+        if(asaf) logEvent('asaf', `⚔️ ${p} subit un Asaf (+30)`);
+        if(bonus) logEvent('bonus', `⤵️ ${p} valide un palier (-50)`);
+    });
+
+    state.history.push(round);
+    recompute();
+    save();
+    render();
+}
+
+function undoRound(){
+    if(!state.history.length)return;
+    state.history.pop();
+    logEvent('asaf', '↩️ Dernière manche annulée');
+    recompute();
+    save();
+    render();
+}
+
+function newGame(){
+    if(confirm('Nouvelle partie ? Tous les joueurs et scores seront supprimés.')){
+        state={players:[],scores:{},history:[],events:[],stats:{}};
+        save();
+        render();
+    }
+}
+
+function exportCSV(){
+    let csv='Round;' + state.players.map(csvEscape).join(';') + '\n';
+    state.history.forEach((r,i)=>{
+        let row = csvEscape(`Round ${i+1}`);
+        state.players.forEach(p => {
+            row += ';' + csvEscape(r[p] ? r[p].score : 0);
+        });
+        csv += row + '\n';
+    });
+    let a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    a.download='yaniv_scores.csv';
+    a.click();
+}
+
+function toggleDark(){document.body.classList.toggle('dark');}
+load();
+</script>
+</body>
+</html>
