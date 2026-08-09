@@ -1,6 +1,15 @@
 # Mémoire de projet — Yaniv (suivi de score)
 
-*Dernière mise à jour : 9 août 2026 — version courante : **`index.html` (v9, publié = Yaniv Club)** ; archive dev = `dev/Yaniv v9.html`.*
+*Dernière mise à jour : 9 août 2026 — version courante : **`index.html` (v10, publié = Yaniv Club)** ; archives dev = `dev/Yaniv v9.html` (merge Damien), `dev/Yaniv v10.html` (sauvegarde+QR).*
+
+## ⭐ v10 (09/08) — sauvegarde renforcée hors-ligne + transfert par QR (choix « sans compte »)
+Thomas a signalé que le site publié « n'enregistre pas les parties » (localStorage = par navigateur/appareil, effacé en privé / purge iOS). Choix retenu : **rester 100 % autonome, sans backend/compte**, et renforcer :
+- **Anti-perte local** : miroir de secours `yaniv_v5_bak` écrit à chaque `persist()` ; `loadLibrary` retombe dessus via `parseLib()` si la clé principale est corrompue. Rappel « dernière sauvegarde fichier » (`yaniv_last_export`, `updateBackupInfo()`), bouton **💾 Sauvegarder sur l'appareil** (export `.json` = la vraie copie qui survit à une purge). Note iOS (ajouter à l'écran d'accueil + exporter).
+- **Transfert par QR** : lib **qrcode-generator (Arase, MIT) minifiée ~21 Ko inlinée** dans un `<script>` dédié avant le principal. `qrSVG()` rend un QR SVG noir/blanc (marge 4), **cappé à ≤105 modules** (scannable) sinon repli lien. Modale `#shareModal` : QR + « Envoyer » (navigator.share) + « Copier le lien ».
+- **⚠️ Payload COMPACT v2 obligatoire pour le QR** : le format brut est inQRable (3 manches = 137 modules ; 8+ manches dépassent la capacité). `encodeShare()`/`decodeShare()` : `{v:2,n,p[],s[],r,h[[score,flags]],f}` — manches en tableaux, drapeaux asaf/yaniv en bitmask ; bonus/stats/events reconstruits par `recompute()` à l'import. Résultat : 15 manches ≈ 101 modules → OK. Rétro-compatible avec l'ancien `{name,state}`. `importPayload`/`checkSharedLink` passent par `decodeShare` puis `recompute`.
+- Vérifié : round-trip encode→décode→recompute = mêmes scores ; QR petite partie OK / énorme payload → null (repli) ; import compact ajoute bien la partie. (harness DOM + node --check.)
+
+
 
 > **Organisation des dossiers (09/08) — un seul dossier `yaniv-club`.** Le produit publié est `index.html` (GitHub Pages `coretc.github.io/yaniv-club/` + Gitea). Tout l'historique de dev (v4→v8, le v7.1 de Damien, cette mémoire, l'archive v9) vit dans `dev/`, versionné sur Gitea **et** GitHub mais sans affecter le site (Pages ne sert que `index.html` à la racine). L'ancien dépôt Gitea `Yaniv` reste comme sauvegarde dormante.
 
